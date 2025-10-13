@@ -35,3 +35,23 @@ A simple Todo app, built with React Native for the frontend, and Python Flask fo
 3. Access the app:
    - Frontend: `http://localhost:3001`
    - Backend API: `http://localhost:5001`
+
+## Command
+
+- To run the backend service in development mode with live reloading, use the following command:
+
+  ```bash
+  cd backend
+  podman run -d \
+  -p 5050:5000 \
+  -v $(pwd):/app \
+  -e WATCHFILES_FORCE_POLLING=true \
+  --name todo-task-dev \
+  todo-task-service
+  ```
+
+- To stop and remove the backend service container, use:
+  ```bash
+  podman stop todo-task-dev
+  podman rm -f todo-task-dev
+  ```
