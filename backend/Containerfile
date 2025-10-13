@@ -1,0 +1,20 @@
+# Containerfile
+FROM python:3.11-slim
+
+# Set working directory inside container
+WORKDIR /app
+
+# Copy only requirements first (for caching)
+COPY requirements.txt .
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy app code (optional for production, not needed for dev bind mount)
+COPY . .
+
+# Expose port
+EXPOSE 5000
+
+# Run FastAPI app in reload mode for development
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5000", "--reload"]
