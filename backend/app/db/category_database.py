@@ -1,9 +1,9 @@
 from app.db.base_database import BaseDatabase
 
 
-class TodoDatabase(BaseDatabase):
+class CategoryDatabase(BaseDatabase):
     _instance = None
-    _db_path: str = "app/db/local/todos.json"
+    _db_path: str = "app/db/local/categories.json"
 
     def __new__(cls):
         if cls._instance is None:
