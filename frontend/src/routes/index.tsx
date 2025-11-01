@@ -22,7 +22,7 @@ function App() {
   const handleEdit = (index: number, todo: TodoModel) => {};
 
   return (
-    <div className="App">
+    <div className="max-w-3xl mx-auto mt-8 flex flex-col gap-4 items-center ">
       <Form
         handleSubmit={(todo) =>
           selectedTodo === undefined
@@ -31,17 +31,11 @@ function App() {
         }
       />
 
-      {todos.length === 0 ? (
-        <div className="alert alert-success mt-2" role="alert">
-          No Todos Available.
-        </div>
-      ) : (
-        <TodosList
-          todos={todos}
-          handleDelete={handleDelete}
-          handleEdit={handleEdit}
-        />
-      )}
+      <TodosList
+        todos={todos}
+        handleDelete={handleDelete}
+        handleEdit={handleEdit}
+      />
     </div>
   );
 }

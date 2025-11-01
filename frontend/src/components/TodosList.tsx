@@ -9,7 +9,7 @@ interface TodosListProps {
 
 const TodosList = ({ todos, handleDelete, handleEdit }: TodosListProps) => {
   return (
-    <div>
+    <div className="w-full flex flex-col gap-4 max-w-md">
       {todos.map((item, index) => {
         return (
           <TodoCard
@@ -20,6 +20,10 @@ const TodosList = ({ todos, handleDelete, handleEdit }: TodosListProps) => {
           />
         );
       })}
+
+      {todos.length === 0 && (
+        <p className="text-gray-500 text-center mt-4">No todos available.</p>
+      )}
     </div>
   );
 };

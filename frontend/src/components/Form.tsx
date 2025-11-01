@@ -1,4 +1,5 @@
 import type { TodoModel } from "@/models/TodoModel";
+import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface FormProps {
@@ -26,21 +27,27 @@ const Form = ({ selectedTodo, handleSubmit }: FormProps) => {
   }, [selectedTodo]);
 
   return (
-    <div className="Form">
-      <input
-        type="text"
-        name="title"
-        value={todo.name}
-        onChange={handleInputChange}
-        placeholder="Todo Title"
-      />
+    <div className="flex flex-col gap-2 m-4  p-4 border border-gray-200 rounded w-md">
+      <h2 className="text-lg font-semibold mb-4">
+        {selectedTodo ? "Edit Todo" : "Add Todo"}
+      </h2>
 
       <input
         type="text"
+        name="name"
+        value={todo.name}
+        onChange={handleInputChange}
+        className="p-2 border border-gray-300 rounded"
+        placeholder="Todo Title"
+      />
+
+      <textarea
         name="description"
         value={todo.description}
-        onChange={handleInputChange}
+        onChange={(e) => setTodo({ ...todo, description: e.target.value })}
+        className="p-2 border border-gray-300 rounded h-20"
         placeholder="Todo Description"
+        rows={4}
       />
 
       <input
@@ -50,10 +57,16 @@ const Form = ({ selectedTodo, handleSubmit }: FormProps) => {
         onChange={(e) =>
           setTodo({ ...todo, deadline: new Date(e.target.value) })
         }
+        className="p-2 border border-gray-300 rounded w-fit"
         placeholder="Todo Deadline"
       />
 
-      <button onClick={() => handleSubmit(todo)}></button>
+      <button
+        className="ml-auto mt-4 px-4 py-2 bg-blue-500 text-white rounded flex items-center gap-2"
+        onClick={() => handleSubmit(todo)}
+      >
+        <Plus /> Add Todo
+      </button>
     </div>
   );
 };
