@@ -1,0 +1,32 @@
+## Frontend Containerfile (Podman/Docker)
+# Dev-oriented image that runs Vite on port 3000 and talks to the backend service
+# named `backend` on port 5000 (as in podman-compose.yml).
+
+FROM node:20-bullseye
+
+WORKDIR /app
+
+# Install dependencies first (leverage caching)
+COPY package.json package-lock.json* ./
+# Clean install with force to properly resolve optional platform-specific dependencies
+# This fixes the @rollup/rollup-linux-arm64-gnu issue
+RUN npm cache clean --force \
+	&& rm -rf node_modules package-lock.json \
+	&& npm install --force
+
+# Copy the rest of the app (optional when using bind mounts in compose)
+COPY . .
+
+# Ensure the SPA (running in the browser) calls the host-exposed backend port.
+# Important: This must be a URL the BROWSER can reach, not the container DNS name.
+# Compose maps backend 5001 -> 5000, so use localhost:5001 and include the API prefix.
+ENV VITE_API_BASE_URL="http://localhost:5001/api/v1"
+
+# Vite dev server
+EXPOSE 3000
+
+# When using a bind mount, node_modules inside the image can be hidden.
+# This start command will install deps into the mounted workspace if needed.
+# Force clean install to avoid npm optional dependency bugs with Rollup
+CMD sh -c "rm -rf node_modules package-lock.json && npm install --force && npm run dev -- --host 0.0.0.0 --port 3000"
+
