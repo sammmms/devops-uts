@@ -24,4 +24,5 @@ jobs:
             podman pull docker.io/wsnsam/devops-uts_backend
             podman pull docker.io/wsnsam/devops-uts_frontend
             podman-compose down
-            podman-compose up -d --replace
+            podman system prune -f
+            podman-compose up -d
