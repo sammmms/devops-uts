@@ -1,0 +1,28 @@
+name: CI/CD Pipeline for VPS
+
+on:
+  push:
+    branches: [ "master" ]
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: SSH into VPS and deploy
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_PRIVATE_KEY }}
+          script: |
+            cd ~/compose-conf
+            podman pull docker.io/wsnsam/devops-uts_backend
+            podman pull docker.io/wsnsam/devops-uts_frontend
+            podman-compose down
+            podman-compose up -d --replace
+
