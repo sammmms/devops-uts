@@ -24,17 +24,25 @@ export default defineConfig({
     },
   },
 
-  /**
-   * 🔒 CI / Rollup stability
-   * Prevents flaky "failed to resolve axios" in CI
-   */
   optimizeDeps: {
-    include: ["axios"],
+    include: [
+      "axios",
+
+      // 🔥 force Radix internals to be resolved
+      "@radix-ui/react-checkbox",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-label",
+      "@radix-ui/react-select",
+
+      // 🔒 radix internal utilities (the real offenders)
+      "@radix-ui/react-use-previous",
+      "@radix-ui/react-use-layout-effect",
+      "@radix-ui/react-compose-refs",
+    ],
   },
 
   build: {
     rollupOptions: {
-      // explicitly keep deps bundled, not externalized
       external: [],
     },
   },
