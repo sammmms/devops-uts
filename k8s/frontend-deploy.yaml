@@ -16,7 +16,7 @@ spec:
       - name: frontend
         image: docker.io/wsnsam/devops-uts_frontend:latest
         ports:
-        - containerPort: 3000
+        - containerPort: "/api"
         env:
         - name: VITE_API_BASE_URL
           value: "http://backend:5000/api/v1"
