@@ -1,6 +1,6 @@
 import type { TodoModel } from "@/models/TodoModel";
 import TodoCard from "./TodoCard";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence } from "motion/react";
 
 interface TodosListProps {
   todos: TodoModel[];

@@ -76,17 +76,9 @@ const TodoCard = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                // Handle completion toggle handled by parent or needing new prop?
-                // For now we will assume 'handleEdit' can be used with modified object,
-                // OR we need to add a dedicated onToggleComplete prop.
-                // RE-READING: User asked "let the user compelete todo without needing to open the form"
-                // I should probably add a dedicated handler or just reuse handleEdit with optimistically updated todo?
-                // Reusing handleEdit is easiest but might open the dialog if not careful.
-                // Actually handleEdit opens dialog in parent.
-                // I need a way to update without opening dialog.
-                // I will update TodoCard props to include 'onToggleComplete' or similar.
+                onToggleComplete(todo);
               }}
-              className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+              className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
                 todo.completed
                   ? "bg-emerald-500 border-emerald-500 text-white"
                   : "border-gray-300 dark:border-gray-600 hover:border-emerald-500 dark:hover:border-emerald-500"
