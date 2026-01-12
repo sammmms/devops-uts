@@ -17,4 +17,6 @@ spec:
         image: docker.io/wsnsam/devops-uts_frontend:latest
         ports:
         - containerPort: 80
+        imagePullPolicy: Always
+
 
