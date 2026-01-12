@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.routes_todo import router as todo_router
 from app.api.routes_category import router as category_router
+from app.api.routes_dashboard import router as dashboard_router
 from app.api.routes_category_todo import router as category_todo_router
 from app.utils.response_util import create_json_response
 
@@ -35,6 +36,7 @@ routes: list[dict[str:APIRouter]] = [
         "todos": todo_router,
         "categories": category_router,
         "category_todos": category_todo_router,
+        "dashboard": dashboard_router,
     }
 ]
 

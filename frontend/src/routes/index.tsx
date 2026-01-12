@@ -1,376 +1,232 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import {
-  queryOptions,
-  useSuspenseQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import type { CategoryModel } from "@/models/CategoryModel";
-import type { TodoModel } from "@/models/TodoModel";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "@/utils/axios_instance";
-import { Plus, Edit2, Trash2, X } from "lucide-react";
-import { Form, TodosList } from "@/components";
-import * as Dialog from "@radix-ui/react-dialog";
-
-const categoriesQuery = queryOptions({
-  queryKey: ["categories"],
-  queryFn: async (): Promise<CategoryModel[]> => {
-    const res = await axiosInstance.get("/category");
-    return res.data.categories;
-  },
-});
-
-const todosQuery = queryOptions({
-  queryKey: ["todos"],
-  queryFn: async (): Promise<TodoModel[]> => {
-    const res = await axiosInstance.get("/todo");
-    return res.data.todos;
-  },
-});
+import {
+  CheckCircle2,
+  Circle,
+  ListTodo,
+  Folder,
+  AlertCircle,
+  Clock,
+} from "lucide-react";
+import { motion } from "motion/react";
+import type { TodoModel } from "@/models/TodoModel";
 
 export const Route = createFileRoute("/")({
-  loader: ({ context }) => {
-    return Promise.all([
-      context.queryClient.ensureQueryData(categoriesQuery),
-      context.queryClient.ensureQueryData(todosQuery),
-    ]);
-  },
-  component: App,
+  component: DashboardPage,
 });
 
-function App() {
-  const { data: categories } = useSuspenseQuery(categoriesQuery);
-  const { data: allTodos } = useSuspenseQuery(todosQuery);
-  const queryClient = useQueryClient();
+function DashboardPage() {
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: async () => {
+      const res = await axiosInstance.get("/dashboard/stats");
+      return res.data.data;
+    },
+  });
 
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
-    null
-  );
-  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<CategoryModel | null>(
-    null
-  );
-  const [categoryName, setCategoryName] = useState("");
-  const [selectedTodo, setSelectedTodo] = useState<TodoModel | undefined>(
-    undefined
-  );
-  const [isTodoDialogOpen, setIsTodoDialogOpen] = useState(false);
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-[50vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
-  // Filter todos by selected category
-  const filteredTodos = selectedCategoryId
-    ? allTodos.filter((todo) => todo.category_id === selectedCategoryId)
-    : [];
+  const statCards = [
+    {
+      title: "Total Todos",
+      value: stats?.total_todos || 0,
+      icon: ListTodo,
+      color: "bg-blue-500",
+      delay: 0,
+    },
+    {
+      title: "Completed",
+      value: stats?.completed_todos || 0,
+      icon: CheckCircle2,
+      color: "bg-emerald-500",
+      delay: 0.1,
+    },
+    {
+      title: "Pending",
+      value: stats?.pending_todos || 0,
+      icon: Circle,
+      color: "bg-amber-500",
+      delay: 0.2,
+    },
+    {
+      title: "Categories",
+      value: stats?.total_categories || 0,
+      icon: Folder,
+      color: "bg-indigo-500",
+      delay: 0.3,
+    },
+  ];
 
-  const selectedCategory = categories.find(
-    (cat) => cat.id === selectedCategoryId
-  );
-
-  const handleOpenAddDialog = () => {
-    setEditingCategory(null);
-    setCategoryName("");
-    setIsCategoryDialogOpen(true);
-  };
-
-  const handleOpenEditDialog = (category: CategoryModel) => {
-    setEditingCategory(category);
-    setCategoryName(category.name);
-    setIsCategoryDialogOpen(true);
-  };
-
-  const handleCloseDialog = () => {
-    setIsCategoryDialogOpen(false);
-    setEditingCategory(null);
-    setCategoryName("");
-  };
-
-  const handleSaveCategory = async () => {
-    if (!categoryName.trim()) return;
-
-    try {
-      if (editingCategory) {
-        await axiosInstance.put(`/category/${editingCategory.id}`, {
-          id: editingCategory.id,
-          name: categoryName,
-        });
-      } else {
-        await axiosInstance.post("/category", { name: categoryName });
-      }
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
-      handleCloseDialog();
-    } catch (error) {
-      console.error("Error saving category:", error);
-    }
-  };
-
-  const handleDeleteCategory = async (categoryId: number) => {
-    if (confirm("Are you sure you want to delete this category?")) {
-      try {
-        await axiosInstance.delete(`/category/${categoryId}`);
-        queryClient.invalidateQueries({ queryKey: ["categories"] });
-        if (selectedCategoryId === categoryId) {
-          setSelectedCategoryId(null);
-        }
-      } catch (error) {
-        console.error("Error deleting category:", error);
-      }
-    }
-  };
-
-  const handleOnAddTodo = async (todo: TodoModel) => {
-    await axiosInstance.post("/todo", todo);
-    queryClient.invalidateQueries({ queryKey: ["todos"] });
-    setIsTodoDialogOpen(false);
-    setSelectedTodo(undefined);
-  };
-
-  const handleOnEditTodo = async (todo: TodoModel) => {
-    if (selectedTodo?.id) {
-      await axiosInstance.put(`/todo/${selectedTodo.id}`, todo);
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
-      setSelectedTodo(undefined);
-      setIsTodoDialogOpen(false);
-    }
-  };
-
-  const handleDeleteTodo = async (index: number) => {
-    const todoToDelete = filteredTodos[index];
-    if (todoToDelete?.id) {
-      await axiosInstance.delete(`/todo/${todoToDelete.id}`);
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
-    }
-  };
-
-  const handleEditTodo = (index: number, _todo: TodoModel) => {
-    setSelectedTodo(filteredTodos[index]);
-    setIsTodoDialogOpen(true);
-  };
-
-  const handleOpenAddTodoDialog = () => {
-    setSelectedTodo(undefined);
-    setIsTodoDialogOpen(true);
-  };
-
-  // Note: Closing of the Todo dialog is handled via Radix onOpenChange
+  const categoryData = stats?.category_distribution || [];
+  const maxCount = Math.max(...categoryData.map((d: any) => d.value), 1);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Categories Section */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-gray-900">Categories</h2>
-                <button
-                  onClick={handleOpenAddDialog}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                >
-                  <Plus size={20} />
-                  Add
-                </button>
-              </div>
+    <div className="max-w-7xl mx-auto p-6">
+      <h1 className="text-3xl font-bold bg-linear-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent mb-8">
+        Dashboard
+      </h1>
 
-              <div className="space-y-2">
-                {categories.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">
-                    No categories yet. Create one to get started!
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {statCards.map((card, index) => {
+          const linkProps =
+            card.title === "Completed"
+              ? { to: "/todos", search: { filter: "completed" } }
+              : card.title === "Pending"
+                ? { to: "/todos", search: { filter: "pending" } }
+                : card.title === "Total Todos"
+                  ? { to: "/todos" }
+                  : null;
+
+          const CardContent = (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: card.delay }}
+              className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl bg-white/60 dark:bg-gray-800/60 cursor-pointer hover:scale-[1.02] transition-transform"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {card.title}
                   </p>
-                ) : (
-                  categories.map((category) => (
-                    <div
-                      key={category.id}
-                      className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all cursor-pointer ${
-                        selectedCategoryId === category.id
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                      }`}
-                      onClick={() => setSelectedCategoryId(category.id)}
-                    >
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900">
-                          {category.name}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          {
-                            allTodos.filter(
-                              (t) => t.category_id === category.id
-                            ).length
-                          }{" "}
-                          todos
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenEditDialog(category);
-                          }}
-                          className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-100 rounded transition-colors"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteCategory(category.id);
-                          }}
-                          className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-100 rounded transition-colors"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
+                  <h3 className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                    {card.value}
+                  </h3>
+                </div>
+                <div className={`p-3 rounded-xl shadow-lg ${card.color}`}>
+                  <card.icon className="w-6 h-6 text-white" />
+                </div>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          );
 
-          {/* Todos Section */}
-          <div className="lg:col-span-2">
-            {selectedCategoryId ? (
-              <div className="space-y-6">
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl font-bold text-gray-900">
-                      {selectedCategory?.name} - Todos
-                    </h2>
-                    <button
-                      onClick={handleOpenAddTodoDialog}
-                      className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-                    >
-                      <Plus size={20} />
-                      Add Todo
-                    </button>
+          return linkProps ? (
+            <Link key={index} {...linkProps} className="block">
+              {CardContent}
+            </Link>
+          ) : (
+            <div key={index}>{CardContent}</div>
+          );
+        })}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Chart Section */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.4 }}
+          className="lg:col-span-2 glass-card p-6 rounded-3xl border border-white/40 dark:border-white/10 shadow-xl bg-white/60 dark:bg-gray-800/60"
+        >
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
+            Category Distribution
+          </h3>
+          <div className="space-y-4">
+            {categoryData.length > 0 ? (
+              categoryData.map((item: any, index: number) => (
+                <div key={index} className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                      {item.name}
+                    </span>
+                    <span className="text-gray-500">{item.value} tasks</span>
                   </div>
-
-                  <TodosList
-                    todos={filteredTodos}
-                    handleDelete={handleDeleteTodo}
-                    handleEdit={handleEditTodo}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white rounded-lg shadow-md p-12 text-center">
-                <div className="text-gray-400 mb-4">
-                  <svg
-                    className="mx-auto h-24 w-24"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1}
-                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  <div className="h-3 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(item.value / maxCount) * 100}%` }}
+                      transition={{ duration: 1, delay: 0.5 + index * 0.1 }}
+                      className="h-full bg-blue-500 rounded-full"
                     />
-                  </svg>
+                  </div>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                  Select a Category
-                </h3>
-                <p className="text-gray-500">
-                  Choose a category from the list to view and manage its todos
-                </p>
+              ))
+            ) : (
+              <div className="text-center text-gray-500 py-10">
+                No category data available
               </div>
             )}
           </div>
+        </motion.div>
+
+        {/* Task Lists Section */}
+        <div className="space-y-6">
+          {/* Overdue Tasks */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.5 }}
+            className="glass-card p-6 rounded-3xl border border-red-100 dark:border-red-900/30 shadow-xl bg-white/60 dark:bg-gray-800/60"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <AlertCircle className="w-5 h-5 text-red-500" />
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                Overdue Tasks
+              </h3>
+            </div>
+            {stats?.overdue_todos && stats.overdue_todos.length > 0 ? (
+              <div className="space-y-3">
+                {stats.overdue_todos.slice(0, 5).map((todo: TodoModel) => (
+                  <div
+                    key={todo.id}
+                    className="p-3 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-800/30"
+                  >
+                    <p className="font-medium text-red-800 dark:text-red-200 truncate">
+                      {todo.name}
+                    </p>
+                    <p className="text-xs text-red-600 dark:text-red-300 mt-1">
+                      Due: {todo.deadline}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">No overdue tasks! 🎉</p>
+            )}
+          </motion.div>
+
+          {/* Upcoming Tasks */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.6 }}
+            className="glass-card p-6 rounded-3xl border border-white/40 dark:border-white/10 shadow-xl bg-white/60 dark:bg-gray-800/60"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <Clock className="w-5 h-5 text-blue-500" />
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                Upcoming Deadlines
+              </h3>
+            </div>
+            {stats?.upcoming_todos && stats.upcoming_todos.length > 0 ? (
+              <div className="space-y-3">
+                {stats.upcoming_todos.slice(0, 5).map((todo: TodoModel) => (
+                  <div
+                    key={todo.id}
+                    className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800/30"
+                  >
+                    <p className="font-medium text-blue-800 dark:text-blue-200 truncate">
+                      {todo.name}
+                    </p>
+                    <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
+                      Due: {todo.deadline}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">No upcoming deadlines.</p>
+            )}
+          </motion.div>
         </div>
       </div>
-
-      {/* Category Dialog (Radix) */}
-      <Dialog.Root
-        open={isCategoryDialogOpen}
-        onOpenChange={setIsCategoryDialogOpen}
-      >
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[90vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-6 shadow-xl focus:outline-none">
-            <div className="flex items-center justify-between mb-4">
-              <Dialog.Title className="text-xl font-bold text-gray-900">
-                {editingCategory ? "Edit Category" : "Add Category"}
-              </Dialog.Title>
-              <Dialog.Close asChild>
-                <button className="text-gray-400 hover:text-gray-600 transition-colors">
-                  <X size={24} />
-                </button>
-              </Dialog.Close>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category Name
-              </label>
-              <input
-                type="text"
-                value={categoryName}
-                onChange={(e) => setCategoryName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter category name"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleSaveCategory();
-                  }
-                }}
-              />
-            </div>
-
-            <div className="flex gap-3 justify-end">
-              <Dialog.Close asChild>
-                <button
-                  onClick={handleCloseDialog}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
-                >
-                  Cancel
-                </button>
-              </Dialog.Close>
-              <button
-                onClick={handleSaveCategory}
-                disabled={!categoryName.trim()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {editingCategory ? "Update" : "Create"}
-              </button>
-            </div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
-
-      {/* Todo Dialog (Radix) */}
-      <Dialog.Root open={isTodoDialogOpen} onOpenChange={setIsTodoDialogOpen}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[90vw] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-6 shadow-xl focus:outline-none">
-            <div className="flex items-center justify-between mb-4">
-              <Dialog.Title className="text-xl font-bold text-gray-900">
-                {selectedTodo ? "Edit Todo" : "Add Todo"}
-              </Dialog.Title>
-              <Dialog.Close asChild>
-                <button className="text-gray-400 hover:text-gray-600 transition-colors">
-                  <X size={24} />
-                </button>
-              </Dialog.Close>
-            </div>
-
-            <Form
-              handleSubmit={(todo) => {
-                const todoWithCategory = {
-                  ...todo,
-                  category_id: selectedCategoryId ?? undefined,
-                };
-                return selectedTodo === undefined
-                  ? handleOnAddTodo(todoWithCategory)
-                  : handleOnEditTodo(todoWithCategory);
-              }}
-              selectedTodo={selectedTodo}
-              hideCategory={true}
-            />
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
     </div>
   );
 }

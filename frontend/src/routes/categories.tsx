@@ -1,5 +1,4 @@
 import CategoryForm from "@/components/CategoryForm";
-import CategoriesList from "@/components/CategoriesList";
 import type { CategoryModel } from "@/models/CategoryModel";
 import axiosInstance from "@/utils/axios_instance";
 import { createFileRoute } from "@tanstack/react-router";
@@ -9,6 +8,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useState } from "react";
+import { CategoriesList } from "@/components";
 
 const categoriesQuery = queryOptions({
   queryKey: ["categories"],
@@ -45,16 +45,13 @@ function CategoriesPage() {
     }
   };
 
-  const handleDelete = async (index: number) => {
-    const categoryToDelete = categories[index];
-    if (categoryToDelete?.id) {
-      await axiosInstance.delete(`/category/${categoryToDelete.id}`);
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
-    }
+  const handleDelete = async (id: number) => {
+    await axiosInstance.delete(`/category/${id}`);
+    queryClient.invalidateQueries({ queryKey: ["categories"] });
   };
 
-  const handleEdit = (index: number, _category: CategoryModel) => {
-    setSelectedCategory(categories[index]);
+  const handleEdit = (category: CategoryModel) => {
+    setSelectedCategory(category);
   };
 
   return (
@@ -70,8 +67,15 @@ function CategoriesPage() {
 
       <CategoriesList
         categories={categories}
-        handleDelete={handleDelete}
-        handleEdit={handleEdit}
+        allTodos={[]}
+        selectedCategoryId={selectedCategory?.id ?? null}
+        onSelectCategory={(id) => {
+          const category = categories.find((c) => c.id === id);
+          if (category) setSelectedCategory(category);
+        }}
+        onDeleteCategory={handleDelete}
+        onEditCategory={handleEdit}
+        onOpenAddDialog={() => setSelectedCategory(undefined)}
       />
     </div>
   );

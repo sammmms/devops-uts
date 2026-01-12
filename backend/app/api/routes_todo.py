@@ -22,8 +22,13 @@ async def create_todo(todo: TodoCreateModel):
 
 
 @router.get("/todo")
-async def get_todos():
-    todos = todo_service.get_all()
+async def get_todos(
+    category_id: int | None = None,
+    completed: bool | None = None,
+    overdue: bool | None = None,
+):
+    # Pass filters to service
+    todos = todo_service.get_all(category_id, completed, overdue)
     return create_json_response("Todos fetched", {"todos": todos})
 
 

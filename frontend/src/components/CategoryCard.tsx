@@ -1,4 +1,6 @@
 import type { CategoryModel } from "@/models/CategoryModel";
+import { Edit2, Trash2 } from "lucide-react";
+import { motion } from "motion/react";
 
 interface CategoryCardProps {
   category: CategoryModel;
@@ -12,38 +14,43 @@ const CategoryCard = ({
   handleDelete,
 }: CategoryCardProps) => {
   return (
-    <article className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow">
+    <motion.article
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      whileHover={{ scale: 1.02 }}
+      className="glass-card rounded-xl p-3 sm:p-5 hover:shadow-lg transition-all duration-300 bg-white/60 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-800"
+    >
       <div className="flex items-center justify-between">
         <div className="flex-1 min-w-0">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
-            {category.name}
-          </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            ID: {category.id}
-          </p>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 truncate">
+              {category.name}
+            </h3>
+          </div>
         </div>
 
-        <div className="ml-4 flex items-center space-x-2">
+        <div className="ml-4 flex items-center gap-2">
           <button
             type="button"
             onClick={() => handleEdit(category)}
             aria-label={`Edit ${category.name}`}
-            className="inline-flex items-center px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
           >
-            Edit
+            <Edit2 className="w-4 h-4" />
           </button>
 
           <button
             type="button"
             onClick={handleDelete}
             aria-label={`Delete ${category.name}`}
-            className="inline-flex items-center px-3 py-1.5 bg-red-50 text-red-700 text-sm font-medium rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-300"
+            className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
           >
-            Delete
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>
-    </article>
+    </motion.article>
   );
 };
 

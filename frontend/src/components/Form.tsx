@@ -8,6 +8,7 @@ import { Label } from "@radix-ui/react-label";
 import * as Checkbox from "@radix-ui/react-checkbox";
 import * as Select from "@radix-ui/react-select";
 import { CheckIcon, ChevronDownIcon } from "@radix-ui/react-icons";
+import DatePicker from "./DatePicker";
 
 interface FormProps {
   selectedTodo?: TodoModel;
@@ -105,7 +106,6 @@ const Form = ({
           autoFocus
         />
       </div>
-
       <div className="flex flex-col gap-2">
         <Label
           htmlFor="todo-description"
@@ -123,26 +123,19 @@ const Form = ({
           rows={3}
         />
       </div>
-
       <div className="flex flex-col gap-2">
         <Label
-          htmlFor="todo-deadline"
+          htmlFor="todo-description"
           className="text-sm font-medium text-gray-700"
         >
           Deadline
         </Label>
-        <input
-          id="todo-deadline"
-          type="date"
-          name="deadline"
+        <DatePicker
           value={todo.deadline || ""}
-          onChange={(e) => setTodo({ ...todo, deadline: e.target.value })}
-          className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
-          placeholder="Todo Deadline"
-          max="9999-12-31"
+          onChange={(date) => setTodo({ ...todo, deadline: date })}
+          placeholder="Select deadline"
         />
       </div>
-
       {!hideCategory && (
         <div className="flex flex-col gap-2">
           <Label className="text-sm font-medium text-gray-700">Category</Label>
@@ -191,7 +184,6 @@ const Form = ({
           </Select.Root>
         </div>
       )}
-
       <div className="flex items-center gap-2 cursor-pointer">
         <Checkbox.Root
           id="todo-completed"
@@ -199,7 +191,7 @@ const Form = ({
           onCheckedChange={(val) =>
             setTodo({ ...todo, completed: val === true })
           }
-          className="flex h-5 w-5 items-center justify-center rounded border border-gray-300 bg-white data-[state=checked]:bg-blue-600"
+          className="flex h-5 w-5 items-center justify-center rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 transition-colors"
         >
           <Checkbox.Indicator className="text-white">
             <CheckIcon />
@@ -207,12 +199,11 @@ const Form = ({
         </Checkbox.Root>
         <Label
           htmlFor="todo-completed"
-          className="text-sm font-medium text-gray-700"
+          className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
         >
           Mark as completed
         </Label>
       </div>
-
       <button
         className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
         onClick={onSubmit}

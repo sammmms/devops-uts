@@ -3,9 +3,12 @@ from app.utils.response_util import create_json_response
 from app.db.category_database import CategoryDatabase
 from app.models.category_model import CategoryCreateModel, CategoryModel
 from app.services.category_services import CategoryServices
+from app.services.todo_services import TodoServices
+from app.db.todo_database import TodoDatabase
 
 router = APIRouter()
 category_service = CategoryServices(db=CategoryDatabase())
+todo_service = TodoServices(db=TodoDatabase())
 
 
 @router.post("/category")
@@ -40,6 +43,9 @@ async def update_category(category: CategoryModel, category_id: int):
 
 @router.delete("/category/{category_id}")
 async def delete_category(category_id: int):
+    # Cascade delete todos
+    todo_service.delete_by_category_id(category_id)
+    
     deleted = category_service.delete(category_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Category not found")
