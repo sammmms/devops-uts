@@ -9,7 +9,7 @@ RUN npm cache clean --force \
 
 COPY . .
 
-ENV VITE_API_BASE_URL="http://localhost:5001/api/v1"
+ENV VITE_API_BASE_URL=http://backend:5000/api/v1
 
 EXPOSE 3000
 
