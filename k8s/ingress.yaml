@@ -5,9 +5,9 @@ metadata:
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web
 spec:
-  ingressClassName: traefik
   rules:
-  - http:
+  - host: todo.wsnsam.my.id
+    http:
       paths:
       - path: /api
         pathType: Prefix
@@ -16,7 +16,6 @@ spec:
             name: backend
             port:
               number: 5000
-
       - path: /
         pathType: Prefix
         backend:
