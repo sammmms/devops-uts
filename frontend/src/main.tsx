@@ -1,5 +1,5 @@
 import { StrictMode } from "react";
-import ReactDOM from "react-dom/client";
+import { createRoot } from "react-dom/client";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 
 // Import the generated route tree
@@ -39,7 +39,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 // Render the app
 const rootElement = document.getElementById("app");
 if (rootElement && !rootElement.innerHTML) {
-  const root = ReactDOM.createRoot(rootElement);
+  const root = createRoot(rootElement);
   root.render(
     <StrictMode>
       <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">

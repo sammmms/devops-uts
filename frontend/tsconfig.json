@@ -4,12 +4,12 @@
     "target": "ES2022",
     "jsx": "react-jsx",
     "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["vite/client"],
 
     /* Bundler mode */
-    "moduleResolution": "node",
-    "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
 
@@ -20,6 +20,8 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
+    "esModuleInterop": true,
+
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
