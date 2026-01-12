@@ -1,15 +1,12 @@
-FROM node:20-bullseye
+FROM node:20-alpine
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-RUN npm cache clean --force \
-	&& rm -rf node_modules package-lock.json \
-	&& npm install --force
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 
 COPY . .
 
 EXPOSE 3000
 
-CMD sh -c "rm -rf node_modules package-lock.json && npm install --force && npm run dev -- --host 0.0.0.0 --port 3000"
-
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]
