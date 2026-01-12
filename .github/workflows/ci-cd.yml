@@ -25,6 +25,14 @@ jobs:
           podman build --platform linux/amd64 -t docker.io/wsnsam/devops-uts_backend .
           podman push docker.io/wsnsam/devops-uts_backend
 
+      - name: ⚡️ Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
       - name: 🏗️ Build Frontend Image
         run: |
           cd frontend
