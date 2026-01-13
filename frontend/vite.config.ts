@@ -1,7 +1,3 @@
-import fs from "node:fs";
-import gracefulFs from "graceful-fs";
-gracefulFs.gracefulify(fs);
-
 import { defineConfig } from "vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
@@ -21,30 +17,23 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
-      axios: "axios/index.js",
     },
   },
 
+  // ✅ ONLY axios here
   optimizeDeps: {
-    include: [
-      "axios",
-
-      // 🔥 force Radix internals to be resolved
-      "@radix-ui/react-checkbox",
-      "@radix-ui/react-dialog",
-      "@radix-ui/react-label",
-      "@radix-ui/react-select",
-
-      // 🔒 radix internal utilities (the real offenders)
-      "@radix-ui/react-use-previous",
-      "@radix-ui/react-use-layout-effect",
-      "@radix-ui/react-compose-refs",
-    ],
+    include: ["axios"],
   },
 
+  // ✅ THIS is the kill switch
+  ssr: {
+    noExternal: ["axios"],
+  },
+
+  // ✅ Let Vite manage Rollup defaults
   build: {
-    rollupOptions: {
-      external: [],
+    commonjsOptions: {
+      transformMixedEsModules: true,
     },
   },
 });
