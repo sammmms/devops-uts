@@ -1,6 +1,6 @@
 import type { CategoryModel } from "@/models/CategoryModel";
 import { Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 interface CategoryFormProps {
   selectedCategory?: CategoryModel;
@@ -42,12 +42,16 @@ const CategoryForm = ({
       <h2 className="text-lg font-semibold mb-4">
         {selectedCategory ? "Edit Category" : "Add Category"}
       </h2>
-
       <input
         type="text"
         name="name"
         value={category.name}
         onChange={(e) => setCategory({ ...category, name: e.target.value })}
+        onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+          if (e.key === "Enter" && !!category.name.trim()) {
+            onSubmit();
+          }
+        }}
         className="p-2 border border-gray-300 rounded"
         placeholder="Category Name"
         required

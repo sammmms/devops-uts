@@ -2,7 +2,7 @@ import type { TodoModel } from "@/models/TodoModel";
 import type { CategoryModel } from "@/models/CategoryModel";
 import axiosInstance from "@/utils/axios_instance";
 import { Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Label } from "@radix-ui/react-label";
 import * as Checkbox from "@radix-ui/react-checkbox";
@@ -100,6 +100,11 @@ const Form = ({
           name="name"
           value={todo.name}
           onChange={handleInputChange}
+          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === "Enter" && todo.name.trim()) {
+              onSubmit();
+            }
+          }}
           className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="Todo Title"
           required

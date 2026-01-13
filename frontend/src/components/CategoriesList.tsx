@@ -8,7 +8,7 @@ interface CategoriesListProps {
   categories: CategoryModel[];
   allTodos: TodoModel[];
   selectedCategoryId: number | null;
-  onSelectCategory: (id: number) => void;
+  onSelectCategory: (id: number | null) => void;
   onEditCategory: (category: CategoryModel) => void;
   onDeleteCategory: (id: number) => void;
   onOpenAddDialog: () => void;
@@ -40,17 +40,17 @@ export const CategoriesList = ({
         </motion.button>
       </div>
 
-      <div className="space-y-3">
+      <motion.div layout className="space-y-3">
         <AnimatePresence mode="popLayout">
-          {/* Uncategorized Option */}
+          {/* All Option */}
           <motion.div
-            key="uncategorized"
+            key="all"
             layout
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => onSelectCategory(-1)}
+            onClick={() => onSelectCategory(null)}
             className={`relative flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all duration-300 group ${
-              selectedCategoryId === -1
+              selectedCategoryId === null
                 ? "bg-blue-600 border-blue-500 shadow-lg shadow-blue-500/30"
                 : "bg-white/50 dark:bg-gray-800/40 border-transparent hover:border-gray-200 dark:hover:border-white/10 hover:shadow-md"
             }`}
@@ -58,21 +58,21 @@ export const CategoriesList = ({
             <div className="flex-1 z-10">
               <h3
                 className={`font-bold text-sm sm:text-base transition-colors ${
-                  selectedCategoryId === -1
+                  selectedCategoryId === null
                     ? "text-white"
                     : "text-gray-800 dark:text-gray-200"
                 }`}
               >
-                Uncategorized
+                All Tasks
               </h3>
               <p
                 className={`text-xs transition-colors ${
-                  selectedCategoryId === -1
+                  selectedCategoryId === null
                     ? "text-blue-100"
                     : "text-gray-500 dark:text-gray-400"
                 }`}
               >
-                {allTodos.filter((t) => !t.category_id).length} tasks
+                {allTodos.length} tasks
               </p>
             </div>
           </motion.div>
@@ -99,6 +99,7 @@ export const CategoriesList = ({
               >
                 <CategoryCard
                   category={category}
+                  isActive={selectedCategoryId === category.id}
                   handleEdit={(cat) => {
                     onEditCategory(cat);
                   }}
@@ -108,7 +109,7 @@ export const CategoriesList = ({
             ))
           )}
         </AnimatePresence>
-      </div>
+      </motion.div>
     </div>
   );
 };

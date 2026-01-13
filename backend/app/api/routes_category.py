@@ -45,7 +45,24 @@ async def create_category(category: CategoryCreateModel, current_user: str = Dep
 @router.get("")
 async def get_categories(current_user: str = Depends(get_current_user)):
     categories = category_service.get_all(whereQuery={"user_id": current_user})
-    return create_json_response("Categories fetched", {"categories": categories})
+    todos = todo_service.get_all(user_id=current_user)
+    
+    # Count todos per category
+    todo_counts = {}
+    for todo in todos:
+        # Assuming todo has category_id field
+        cat_id = getattr(todo, "category_id", None)
+        if cat_id is not None:
+            todo_counts[cat_id] = todo_counts.get(cat_id, 0) + 1
+            
+    # Add count to category objects (convert to dict first if needed, or set attribute)
+    categories_with_count = []
+    for cat in categories:
+        cat_dict = cat.model_dump()
+        cat_dict["todos_count"] = todo_counts.get(cat.id, 0)
+        categories_with_count.append(cat_dict)
+        
+    return create_json_response("Categories fetched", {"categories": categories_with_count})
 
 
 @router.get("/{category_id}")

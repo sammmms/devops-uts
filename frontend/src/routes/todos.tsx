@@ -47,7 +47,10 @@ const todosQuery = (
   queryOptions({
     queryKey: ["todos", categoryId, filters],
     queryFn: async (): Promise<TodoModel[]> => {
-      const params: any = { category_id: categoryId };
+      const params: any = {};
+      if (categoryId !== null && categoryId !== undefined) {
+        params.category_id = categoryId;
+      }
       if (filters?.completed !== undefined)
         params.completed = filters.completed;
       if (filters?.overdue !== undefined) params.overdue = filters.overdue;
@@ -57,18 +60,22 @@ const todosQuery = (
     },
   });
 
+// Define search param structure with zod for robustness if needed, but using manual here
 export const Route = createFileRoute("/todos")({
   component: TodosPage,
-  validateSearch: (search: Record<string, unknown>): { filter?: string } => {
+  validateSearch: (
+    search: Record<string, unknown>
+  ): { filter?: string; categoryId?: number } => {
     return {
       filter: (search.filter as string) || undefined,
+      categoryId: search.categoryId ? Number(search.categoryId) : undefined,
     };
   },
 });
 
 function TodosPage() {
   const navigate = Route.useNavigate();
-  const { filter } = Route.useSearch();
+  const { filter, categoryId: selectedCategoryIdParam } = Route.useSearch();
   const queryClient = useQueryClient();
 
   // Category Dialog State
@@ -84,10 +91,8 @@ function TodosPage() {
   );
   const [isTodoDialogOpen, setIsTodoDialogOpen] = useState(false);
 
-  // Category Filter State
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
-    -1
-  );
+  // Category Filter State - Derived from URL
+  const selectedCategoryId = selectedCategoryIdParam ?? null;
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
 
   // Derived filters based on 'filter' search param
@@ -108,6 +113,15 @@ function TodosPage() {
     setEditingCategory(category);
     setCategoryName(category.name);
     setIsCategoryDialogOpen(true);
+  };
+
+  const handleCategoryChange = (id: number | null) => {
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        categoryId: id || undefined,
+      }),
+    });
   };
 
   const handleCloseDialog = () => {
@@ -146,7 +160,7 @@ function TodosPage() {
       showSuccessToast("Category deleted successfully!");
       queryClient.invalidateQueries({ queryKey: ["categories"] });
       if (selectedCategoryId === categoryId) {
-        setSelectedCategoryId(null);
+        handleCategoryChange(null);
       }
     } catch (error) {
       showErrorToast(
@@ -233,7 +247,7 @@ function TodosPage() {
               <React.Suspense fallback={<CategoriesListShimmer />}>
                 <CategoriesSection
                   selectedCategoryId={selectedCategoryId}
-                  onSelectCategory={setSelectedCategoryId}
+                  onSelectCategory={handleCategoryChange}
                   onOpenAddDialog={handleOpenAddDialog}
                   onDeleteCategory={handleDeleteCategory}
                   onEditCategory={handleOpenEditDialog}
@@ -427,48 +441,34 @@ function TodosSection({
 
   let selectedCategory: CategoryModel | undefined;
 
-  if (selectedCategoryId === -1) {
+  if (selectedCategoryId === null) {
+    selectedCategory = { id: -1, name: "All Tasks" };
+  } else if (selectedCategoryId === -1) {
     selectedCategory = { id: -1, name: "Uncategorized" };
   } else if (selectedCategoryId) {
     selectedCategory = categories.find((cat) => cat.id === selectedCategoryId);
   }
 
-  if (!selectedCategoryId) {
-    return (
-      <div className="glass-card rounded-3xl p-12 text-center border border-gray-100 dark:border-gray-800 min-h-125 flex flex-col items-center justify-center">
-        <div className="text-gray-300 dark:text-gray-700 mb-6">
-          <svg
-            className="mx-auto h-32 w-32 opacity-50"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1}
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-            />
-          </svg>
-        </div>
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-          Select a Category
-        </h3>
-        <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-          Select a category from the sidebar to view your tasks, or create a new
-          category to get started.
-        </p>
-      </div>
-    );
-  }
+  /* Placeholder removed to show All Tasks by default */
 
   return (
     <div className="space-y-6">
       <div className="glass-card rounded-3xl p-4 sm:p-6 border border-gray-100 dark:border-gray-800 min-h-125">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate max-w-[60%]">
-            {selectedCategory?.name}
-          </h2>
+          <div className="flex-1 min-w-0 pr-4">
+            <AnimatePresence mode="wait">
+              <motion.h2
+                key={selectedCategory?.name || "all-tasks"}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                transition={{ duration: 0.2 }}
+                className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate"
+              >
+                {selectedCategory?.name}
+              </motion.h2>
+            </AnimatePresence>
+          </div>
           <div className="flex items-center gap-3">
             {/* Desktop Controls */}
             <div className="hidden sm:flex items-center gap-3">
@@ -505,6 +505,7 @@ function TodosSection({
         </div>
 
         <TodosList
+          key={selectedCategoryId ?? "all"}
           todos={todos}
           handleDelete={(index) => handleDeleteTodo(index, todos)}
           handleEdit={(index) => handleEditTodo(index, todos)}
