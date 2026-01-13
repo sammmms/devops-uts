@@ -21,6 +21,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      axios: "axios/dist/axios.js",
     },
   },
 
