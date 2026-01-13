@@ -20,20 +20,15 @@ export default defineConfig({
     },
   },
 
-  // ✅ ONLY axios here
+  // 🔥 REQUIRED for axios in CI
   optimizeDeps: {
     include: ["axios"],
   },
 
-  // ✅ THIS is the kill switch
-  ssr: {
-    noExternal: ["axios"],
-  },
-
-  // ✅ Let Vite manage Rollup defaults
   build: {
+    // 🔥 REQUIRED for dual ESM/CJS deps
     commonjsOptions: {
-      transformMixedEsModules: true,
+      include: [/node_modules/],
     },
   },
 });
