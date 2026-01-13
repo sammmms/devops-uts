@@ -11,3 +11,5 @@ export * from "./CreateTodoDialog";
 export { Shimmer, CategoriesListShimmer, TodosListShimmer } from "./Shimmer";
 export { ProtectedRoute } from "./ProtectedRoute";
 export * from "./ui";
+export * from "./SmartFAB";
+export { default as CategoryForm } from "./CategoryForm";

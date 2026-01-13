@@ -1,7 +1,37 @@
 import * as React from "react";
 import * as LabelPrimitive from "@radix-ui/react-label";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
+import * as SelectPrimitive from "@radix-ui/react-select";
+import { X, Check, ChevronDown } from "lucide-react";
+
+/**
+ * Badge Component
+ */
+export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
+  variant?: "default" | "secondary" | "destructive" | "outline";
+}
+
+export const Badge = ({
+  className = "",
+  variant = "default",
+  ...props
+}: BadgeProps) => {
+  const variants = {
+    default: "bg-blue-600 text-white hover:bg-blue-700",
+    secondary:
+      "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600",
+    destructive: "bg-red-600 text-white hover:bg-red-700",
+    outline:
+      "text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700",
+  };
+
+  return (
+    <div
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-gray-950 focus:ring-offset-2 dark:focus:ring-gray-300 ${variants[variant]} ${className}`}
+      {...props}
+    />
+  );
+};
 
 /**
  * Button Component
@@ -14,15 +44,30 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className = "", variant = "default", size = "md", isLoading = false, disabled, children, ...props }, ref) => {
-    const baseStyles = "font-medium rounded-lg transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed";
-    
+  (
+    {
+      className = "",
+      variant = "default",
+      size = "md",
+      isLoading = false,
+      disabled,
+      children,
+      ...props
+    },
+    ref
+  ) => {
+    const baseStyles =
+      "font-medium rounded-lg transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed";
+
     const variants = {
       default: "bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800",
       destructive: "bg-red-600 text-white hover:bg-red-700 active:bg-red-800",
-      outline: "border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900",
-      secondary: "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600",
-      ghost: "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800",
+      outline:
+        "border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900",
+      secondary:
+        "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600",
+      ghost:
+        "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800",
     };
 
     const sizes = {
@@ -38,7 +83,9 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
         {...props}
       >
-        {isLoading && <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />}
+        {isLoading && (
+          <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+        )}
         {children}
       </button>
     );
@@ -84,7 +131,9 @@ Input.displayName = "Input";
  * Label Component
  * Radix UI Label wrapped with Tailwind styling
  */
-interface LabelProps extends React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> {}
+interface LabelProps extends React.ComponentPropsWithoutRef<
+  typeof LabelPrimitive.Root
+> {}
 
 export const Label = React.forwardRef<
   React.ElementRef<typeof LabelPrimitive.Root>,
@@ -171,7 +220,9 @@ CardContent.displayName = "CardContent";
 export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
 
-interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {}
+interface DialogContentProps extends React.ComponentPropsWithoutRef<
+  typeof DialogPrimitive.Content
+> {}
 
 export const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
@@ -207,7 +258,9 @@ export const DialogHeader = ({
 
 DialogHeader.displayName = "DialogHeader";
 
-interface DialogTitleProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title> {}
+interface DialogTitleProps extends React.ComponentPropsWithoutRef<
+  typeof DialogPrimitive.Title
+> {}
 
 export const DialogTitle = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Title>,
@@ -222,7 +275,9 @@ export const DialogTitle = React.forwardRef<
 
 DialogTitle.displayName = DialogPrimitive.Title.displayName;
 
-interface DialogDescriptionProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description> {}
+interface DialogDescriptionProps extends React.ComponentPropsWithoutRef<
+  typeof DialogPrimitive.Description
+> {}
 
 export const DialogDescription = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Description>,
@@ -238,42 +293,137 @@ export const DialogDescription = React.forwardRef<
 DialogDescription.displayName = DialogPrimitive.Description.displayName;
 
 /**
- * Select Component
- * Simple select wrapper with Tailwind styling
+ * NativeSelect Component
+ * Simple select wrapper with Tailwind styling (Native HTML Select)
  */
-interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+interface NativeSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   error?: string;
   options: Array<{ value: string | number; label: string }>;
 }
 
-export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className = "", label, error, options, ...props }, ref) => (
-    <div className="w-full">
-      {label && (
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          {label}
-        </label>
-      )}
-      <select
-        ref={ref}
-        className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-          error ? "border-red-500 focus:ring-red-500" : ""
-        } ${className}`}
-        {...props}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
-    </div>
-  )
-);
+export const NativeSelect = React.forwardRef<
+  HTMLSelectElement,
+  NativeSelectProps
+>(({ className = "", label, error, options, ...props }, ref) => (
+  <div className="w-full">
+    {label && (
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        {label}
+      </label>
+    )}
+    <select
+      ref={ref}
+      className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+        error ? "border-red-500 focus:ring-red-500" : ""
+      } ${className}`}
+      {...props}
+    >
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+    {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+  </div>
+));
 
-Select.displayName = "Select";
+NativeSelect.displayName = "NativeSelect";
+
+/**
+ * Select Component (Radix UI)
+ */
+export const Select = SelectPrimitive.Root;
+
+export const SelectGroup = SelectPrimitive.Group;
+
+export const SelectValue = SelectPrimitive.Value;
+
+export const SelectTrigger = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
+>(({ className = "", children, ...props }, ref) => (
+  <SelectPrimitive.Trigger
+    ref={ref}
+    className={`flex h-10 w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-800 dark:bg-slate-950 dark:ring-offset-slate-950 dark:placeholder:text-gray-400 ${className}`}
+    {...props}
+  >
+    {children}
+    <SelectPrimitive.Icon asChild>
+      <ChevronDown className="h-4 w-4 opacity-50" />
+    </SelectPrimitive.Icon>
+  </SelectPrimitive.Trigger>
+));
+SelectTrigger.displayName = SelectPrimitive.Trigger.displayName;
+
+export const SelectContent = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
+>(({ className = "", position = "popper", ...props }, ref) => (
+  <SelectPrimitive.Portal>
+    <SelectPrimitive.Content
+      ref={ref}
+      className={`relative z-50 min-w-32 overflow-hidden rounded-md border border-gray-200 bg-white text-gray-950 shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 dark:border-gray-800 dark:bg-slate-950 dark:text-gray-50 ${className}`}
+      position={position}
+      {...props}
+    >
+      <SelectPrimitive.Viewport
+        className={`p-1 ${
+          position === "popper" &&
+          "h-(--radix-select-trigger-height) w-full min-w-(--radix-select-trigger-width)"
+        }`}
+      >
+        {props.children}
+      </SelectPrimitive.Viewport>
+    </SelectPrimitive.Content>
+  </SelectPrimitive.Portal>
+));
+SelectContent.displayName = SelectPrimitive.Content.displayName;
+
+export const SelectLabel = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Label>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>
+>(({ className = "", ...props }, ref) => (
+  <SelectPrimitive.Label
+    ref={ref}
+    className={`py-1.5 pl-8 pr-2 text-sm font-semibold ${className}`}
+    {...props}
+  />
+));
+SelectLabel.displayName = SelectPrimitive.Label.displayName;
+
+export const SelectItem = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Item>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
+>(({ className = "", children, ...props }, ref) => (
+  <SelectPrimitive.Item
+    ref={ref}
+    className={`relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-gray-100 focus:text-gray-900 data-disabled:pointer-events-none data-disabled:opacity-50 dark:focus:bg-slate-800 dark:focus:text-gray-50 ${className}`}
+    {...props}
+  >
+    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+      <SelectPrimitive.ItemIndicator>
+        <Check className="h-4 w-4" />
+      </SelectPrimitive.ItemIndicator>
+    </span>
+
+    <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+  </SelectPrimitive.Item>
+));
+SelectItem.displayName = SelectPrimitive.Item.displayName;
+
+export const SelectSeparator = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Separator>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Separator>
+>(({ className = "", ...props }, ref) => (
+  <SelectPrimitive.Separator
+    ref={ref}
+    className={`-mx-1 my-1 h-px bg-gray-100 dark:bg-gray-800 ${className}`}
+    {...props}
+  />
+));
+SelectSeparator.displayName = SelectPrimitive.Separator.displayName;
 
 /**
  * Textarea Component

@@ -25,16 +25,12 @@ function DashboardPage() {
   } = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: async () => {
-      console.log("Fetching dashboard stats...");
       const res = await axiosInstance.get("/dashboard/stats");
-      console.log("Dashboard stats response:", res.data);
       return res.data.data;
     },
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
-
-  console.log("Dashboard state:", { stats, isLoading, error });
 
   if (isLoading) {
     return (

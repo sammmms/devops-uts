@@ -16,10 +16,21 @@ import {
   CategoriesList,
   CreateCategoryDialog,
   CreateTodoDialog,
-  CategoriesListShimmer,
   TodosListShimmer,
+  CategoriesListShimmer,
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+  Dialog,
+  Button,
+  SmartFAB,
 } from "@/components";
 import * as React from "react";
+import { Filter, X } from "lucide-react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { AnimatePresence, motion } from "motion/react";
 
 const categoriesQuery = queryOptions({
   queryKey: ["categories"],
@@ -56,6 +67,7 @@ export const Route = createFileRoute("/todos")({
 });
 
 function TodosPage() {
+  const navigate = Route.useNavigate();
   const { filter } = Route.useSearch();
   const queryClient = useQueryClient();
 
@@ -76,6 +88,7 @@ function TodosPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     -1
   );
+  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
 
   // Derived filters based on 'filter' search param
   const filters = {
@@ -128,20 +141,18 @@ function TodosPage() {
   };
 
   const handleDeleteCategory = async (categoryId: number) => {
-    if (confirm("Are you sure you want to delete this category?")) {
-      try {
-        await axiosInstance.delete(`/category/${categoryId}`);
-        showSuccessToast("Category deleted successfully!");
-        queryClient.invalidateQueries({ queryKey: ["categories"] });
-        if (selectedCategoryId === categoryId) {
-          setSelectedCategoryId(null);
-        }
-      } catch (error) {
-        showErrorToast(
-          error instanceof Error ? error.message : "Error deleting category"
-        );
-        console.error("Error deleting category:", error);
+    try {
+      await axiosInstance.delete(`/category/${categoryId}`);
+      showSuccessToast("Category deleted successfully!");
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      if (selectedCategoryId === categoryId) {
+        setSelectedCategoryId(null);
       }
+    } catch (error) {
+      showErrorToast(
+        error instanceof Error ? error.message : "Error deleting category"
+      );
+      console.error("Error deleting category:", error);
     }
   };
 
@@ -215,7 +226,7 @@ function TodosPage() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen">
-        <div className="max-w-7xl mx-auto p-6">
+        <div className="max-w-7xl mx-auto px-4 pb-4 pt-0 sm:p-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Categories Section */}
             <div className="lg:col-span-1">
@@ -263,6 +274,104 @@ function TodosPage() {
           onSubmit={handleTodoSubmit}
           selectedCategoryId={selectedCategoryId}
         />
+
+        {/* Smart FAB */}
+        <SmartFAB
+          className="sm:hidden"
+          actions={[
+            {
+              id: "add_task",
+              label: "Add Task",
+              icon: <Plus className="w-8 h-8" />,
+              onClick: handleOpenAddTodoDialog,
+            },
+            {
+              id: "filter",
+              label: "Filter Tasks",
+              icon: <Filter className="w-7 h-7" />,
+              onClick: () => setIsFilterDialogOpen(true),
+            },
+            {
+              id: "add_category",
+              label: "Add Category",
+              icon: <Plus className="w-7 h-7" />,
+              onClick: handleOpenAddDialog,
+            },
+          ]}
+        />
+
+        {/* Mobile Filter Dialog (Controlled State) */}
+        <Dialog open={isFilterDialogOpen} onOpenChange={setIsFilterDialogOpen}>
+          <AnimatePresence>
+            {isFilterDialogOpen && (
+              <DialogPrimitive.Portal forceMount>
+                <DialogPrimitive.Overlay asChild>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm"
+                  />
+                </DialogPrimitive.Overlay>
+                <DialogPrimitive.Content asChild>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: "-50%", x: "-50%" }}
+                    animate={{ opacity: 1, scale: 1, y: "-50%", x: "-50%" }}
+                    exit={{ opacity: 0, scale: 0.95, y: "-50%", x: "-50%" }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="fixed left-1/2 top-1/2 z-50 w-[90vw] max-w-sm rounded-2xl bg-white dark:bg-gray-900 p-6 shadow-2xl focus:outline-none glass-card border border-gray-100 dark:border-gray-800 text-gray-900 dark:text-gray-100"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <DialogPrimitive.Title className="text-xl font-bold">
+                        Filter Tasks
+                      </DialogPrimitive.Title>
+                      <DialogPrimitive.Close asChild>
+                        <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                          <X size={24} />
+                        </button>
+                      </DialogPrimitive.Close>
+                    </div>
+
+                    <div className="grid gap-4">
+                      <div className="grid gap-2">
+                        {["all", "completed", "pending", "overdue"].map((f) => (
+                          <Button
+                            key={f}
+                            variant={
+                              filters.completed ===
+                                (f === "completed"
+                                  ? true
+                                  : f === "pending"
+                                    ? false
+                                    : undefined) &&
+                              filters.overdue ===
+                                (f === "overdue" ? true : undefined)
+                                ? "default"
+                                : "outline"
+                            }
+                            className="justify-start capitalize h-12 text-base"
+                            onClick={() => {
+                              navigate({
+                                search: (prev) => ({
+                                  ...prev,
+                                  filter: f === "all" ? undefined : f,
+                                }),
+                              });
+                              setIsFilterDialogOpen(false);
+                            }}
+                          >
+                            {f === "all" ? "All Tasks" : f}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                </DialogPrimitive.Content>
+              </DialogPrimitive.Portal>
+            )}
+          </AnimatePresence>
+        </Dialog>
       </div>
     </ProtectedRoute>
   );
@@ -300,10 +409,21 @@ function TodosSection({
   handleEditTodo,
   handleToggleComplete,
 }: any) {
+  const navigate = Route.useNavigate();
+  const { filter } = Route.useSearch();
   const { data: categories } = useSuspenseQuery(categoriesQuery);
   const { data: todos } = useSuspenseQuery(
     todosQuery(selectedCategoryId, filters)
   );
+
+  const handleFilterChange = (value: string) => {
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        filter: value === "all" ? undefined : value,
+      }),
+    });
+  };
 
   let selectedCategory: CategoryModel | undefined;
 
@@ -349,14 +469,39 @@ function TodosSection({
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate max-w-[60%]">
             {selectedCategory?.name}
           </h2>
-          <button
-            onClick={handleOpenAddTodoDialog}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-emerald-600 text-white text-sm sm:text-base rounded-xl hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-500/20"
-          >
-            <Plus size={18} />
-            <span className="hidden sm:inline">Add Task</span>
-            <span className="sm:hidden">Add</span>
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Desktop Controls */}
+            <div className="hidden sm:flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                {/* Filter Badge Removed */}
+                <div className="w-[130px]">
+                  <Select
+                    value={filter || "all"}
+                    onValueChange={handleFilterChange}
+                  >
+                    <SelectTrigger className="h-10 text-sm bg-white/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700">
+                      <SelectValue placeholder="Filter" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Tasks</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="overdue">Overdue</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <button
+                onClick={handleOpenAddTodoDialog}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-base rounded-xl hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-500/20"
+              >
+                <Plus size={18} />
+                <span>Add Task</span>
+              </button>
+            </div>
+
+            {/* Mobile Controls (FABs) - Replaced by SmartFAB */}
+          </div>
         </div>
 
         <TodosList
