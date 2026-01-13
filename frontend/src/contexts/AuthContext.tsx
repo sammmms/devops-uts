@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/config";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 interface User {
@@ -48,14 +49,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         ? { email: emailOrUsername, password }
         : { username: emailOrUsername, password };
 
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/v1/auth/login`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
       if (!response.ok) {
         const error = await response.json();
@@ -80,14 +78,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     password: string
   ) => {
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/v1/auth/register`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, username, password }),
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, username, password }),
+      });
 
       if (!response.ok) {
         const error = await response.json();
