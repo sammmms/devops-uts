@@ -1,34 +1,26 @@
 import { defineConfig } from "vite";
-import viteReact from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
-import { tanstackRouter } from "@tanstack/router-plugin/vite";
+import react from "@vitejs/plugin-react";
 import { fileURLToPath, URL } from "node:url";
 
 export default defineConfig({
-  plugins: [
-    tanstackRouter({
-      target: "react",
-      autoCodeSplitting: true,
-    }),
-    viteReact(),
-    tailwindcss(),
-  ],
+  plugins: [react()],
 
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
+    // 🔥 THIS IS THE KEY
+    conditions: ["browser", "module", "default"],
   },
 
-  // 🔥 REQUIRED for axios in CI
   optimizeDeps: {
-    include: ["axios"],
+    include: ["axios", "@radix-ui/number", "@radix-ui/react-select"],
   },
 
   build: {
-    // 🔥 REQUIRED for dual ESM/CJS deps
     commonjsOptions: {
       include: [/node_modules/],
+      transformMixedEsModules: true,
     },
   },
 });
