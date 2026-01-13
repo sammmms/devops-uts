@@ -5,6 +5,8 @@ import {
   useSuspenseQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { showSuccessToast, showErrorToast } from "@/utils/toast";
+import { ProtectedRoute } from "@/components";
 import type { CategoryModel } from "@/models/CategoryModel";
 import type { TodoModel } from "@/models/TodoModel";
 import axiosInstance from "@/utils/axios_instance";
@@ -44,14 +46,6 @@ const todosQuery = (
     },
   });
 
-// ... inside TodosPage/TodosSection updates ...
-
-// In this simplified context, I'll update TodosSection to accept 'filter' prop possibly?
-// Wait, the user clicks from Dashboard -> /todos?filter=pending.
-// So I need to read search params.
-// I will just use `window.location.search` parsing or `useSearch` if configured.
-// `createFileRoute` supports `validateSearch`.
-
 export const Route = createFileRoute("/todos")({
   component: TodosPage,
   validateSearch: (search: Record<string, unknown>): { filter?: string } => {
@@ -64,26 +58,6 @@ export const Route = createFileRoute("/todos")({
 function TodosPage() {
   const { filter } = Route.useSearch();
   const queryClient = useQueryClient();
-  // ...
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
-    -1
-  );
-
-  // Derived filters based on 'filter' search param
-  const filters = {
-    completed:
-      filter === "completed" ? true : filter === "pending" ? false : undefined,
-    overdue: filter === "overdue" ? true : undefined,
-  };
-
-  // Update TodosSection call
-  // ...
-  <TodosSection
-    selectedCategoryId={selectedCategoryId}
-    filters={filters}
-    // ...
-  />;
-  // ...
 
   // Category Dialog State
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
@@ -97,6 +71,18 @@ function TodosPage() {
     undefined
   );
   const [isTodoDialogOpen, setIsTodoDialogOpen] = useState(false);
+
+  // Category Filter State
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
+    -1
+  );
+
+  // Derived filters based on 'filter' search param
+  const filters = {
+    completed:
+      filter === "completed" ? true : filter === "pending" ? false : undefined,
+    overdue: filter === "overdue" ? true : undefined,
+  };
 
   // Handlers
   const handleOpenAddDialog = () => {
@@ -126,12 +112,17 @@ function TodosPage() {
           id: editingCategory.id,
           name: categoryName,
         });
+        showSuccessToast("Category updated successfully!");
       } else {
         await axiosInstance.post("/category", { name: categoryName });
+        showSuccessToast("Category created successfully!");
       }
       queryClient.invalidateQueries({ queryKey: ["categories"] });
       handleCloseDialog();
     } catch (error) {
+      showErrorToast(
+        error instanceof Error ? error.message : "Error saving category"
+      );
       console.error("Error saving category:", error);
     }
   };
@@ -140,37 +131,58 @@ function TodosPage() {
     if (confirm("Are you sure you want to delete this category?")) {
       try {
         await axiosInstance.delete(`/category/${categoryId}`);
+        showSuccessToast("Category deleted successfully!");
         queryClient.invalidateQueries({ queryKey: ["categories"] });
         if (selectedCategoryId === categoryId) {
           setSelectedCategoryId(null);
         }
       } catch (error) {
+        showErrorToast(
+          error instanceof Error ? error.message : "Error deleting category"
+        );
         console.error("Error deleting category:", error);
       }
     }
   };
 
   const handleTodoSubmit = async (todo: TodoModel) => {
-    if (selectedTodo === undefined) {
-      await axiosInstance.post("/todo", todo);
-    } else {
-      if (selectedTodo.id) {
-        await axiosInstance.put(`/todo/${selectedTodo.id}`, todo);
+    try {
+      if (selectedTodo === undefined) {
+        await axiosInstance.post("/todo", todo);
+        showSuccessToast("Todo created successfully!");
+      } else {
+        if (selectedTodo.id) {
+          await axiosInstance.put(`/todo/${selectedTodo.id}`, todo);
+          showSuccessToast("Todo updated successfully!");
+        }
       }
+      queryClient.invalidateQueries({ queryKey: ["todos"] });
+      setIsTodoDialogOpen(false);
+      setSelectedTodo(undefined);
+    } catch (error) {
+      showErrorToast(
+        error instanceof Error ? error.message : "Error saving todo"
+      );
+      console.error("Error saving todo:", error);
     }
-    queryClient.invalidateQueries({ queryKey: ["todos"] });
-    setIsTodoDialogOpen(false);
-    setSelectedTodo(undefined);
   };
 
   const handleDeleteTodo = async (
     index: number,
     filteredTodos: TodoModel[]
   ) => {
-    const todoToDelete = filteredTodos[index];
-    if (todoToDelete?.id) {
-      await axiosInstance.delete(`/todo/${todoToDelete.id}`);
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
+    try {
+      const todoToDelete = filteredTodos[index];
+      if (todoToDelete?.id) {
+        await axiosInstance.delete(`/todo/${todoToDelete.id}`);
+        showSuccessToast("Todo deleted successfully!");
+        queryClient.invalidateQueries({ queryKey: ["todos"] });
+      }
+    } catch (error) {
+      showErrorToast(
+        error instanceof Error ? error.message : "Error deleting todo"
+      );
+      console.error("Error deleting todo:", error);
     }
   };
 
@@ -183,8 +195,14 @@ function TodosPage() {
     try {
       const updatedTodo = { ...todo, completed: !todo.completed };
       await axiosInstance.put(`/todo/${todo.id}`, updatedTodo);
+      showSuccessToast(
+        updatedTodo.completed ? "Todo completed!" : "Todo marked as pending!"
+      );
       queryClient.invalidateQueries({ queryKey: ["todos"] });
     } catch (error) {
+      showErrorToast(
+        error instanceof Error ? error.message : "Error updating todo"
+      );
       console.error("Error toggling todo completion:", error);
     }
   };
@@ -195,56 +213,58 @@ function TodosPage() {
   };
 
   return (
-    <div className="min-h-screen">
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Categories Section */}
-          <div className="lg:col-span-1">
-            <React.Suspense fallback={<CategoriesListShimmer />}>
-              <CategoriesSection
-                selectedCategoryId={selectedCategoryId}
-                onSelectCategory={setSelectedCategoryId}
-                onOpenAddDialog={handleOpenAddDialog}
-                onDeleteCategory={handleDeleteCategory}
-                onEditCategory={handleOpenEditDialog}
-              />
-            </React.Suspense>
-          </div>
+    <ProtectedRoute>
+      <div className="min-h-screen">
+        <div className="max-w-7xl mx-auto p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Categories Section */}
+            <div className="lg:col-span-1">
+              <React.Suspense fallback={<CategoriesListShimmer />}>
+                <CategoriesSection
+                  selectedCategoryId={selectedCategoryId}
+                  onSelectCategory={setSelectedCategoryId}
+                  onOpenAddDialog={handleOpenAddDialog}
+                  onDeleteCategory={handleDeleteCategory}
+                  onEditCategory={handleOpenEditDialog}
+                />
+              </React.Suspense>
+            </div>
 
-          {/* Todos Section */}
-          <div className="lg:col-span-2">
-            <React.Suspense fallback={<TodosListShimmer />}>
-              <TodosSection
-                selectedCategoryId={selectedCategoryId}
-                filters={filters}
-                handleOpenAddTodoDialog={handleOpenAddTodoDialog}
-                handleDeleteTodo={handleDeleteTodo}
-                handleEditTodo={handleEditTodo}
-                handleToggleComplete={handleToggleComplete}
-              />
-            </React.Suspense>
+            {/* Todos Section */}
+            <div className="lg:col-span-2">
+              <React.Suspense fallback={<TodosListShimmer />}>
+                <TodosSection
+                  selectedCategoryId={selectedCategoryId}
+                  filters={filters}
+                  handleOpenAddTodoDialog={handleOpenAddTodoDialog}
+                  handleDeleteTodo={handleDeleteTodo}
+                  handleEditTodo={handleEditTodo}
+                  handleToggleComplete={handleToggleComplete}
+                />
+              </React.Suspense>
+            </div>
           </div>
         </div>
+
+        <CreateCategoryDialog
+          isOpen={isCategoryDialogOpen}
+          onOpenChange={setIsCategoryDialogOpen}
+          editingCategory={editingCategory}
+          categoryName={categoryName}
+          setCategoryName={setCategoryName}
+          onSave={handleSaveCategory}
+          onClose={handleCloseDialog}
+        />
+
+        <CreateTodoDialog
+          isOpen={isTodoDialogOpen}
+          onOpenChange={setIsTodoDialogOpen}
+          selectedTodo={selectedTodo}
+          onSubmit={handleTodoSubmit}
+          selectedCategoryId={selectedCategoryId}
+        />
       </div>
-
-      <CreateCategoryDialog
-        isOpen={isCategoryDialogOpen}
-        onOpenChange={setIsCategoryDialogOpen}
-        editingCategory={editingCategory}
-        categoryName={categoryName}
-        setCategoryName={setCategoryName}
-        onSave={handleSaveCategory}
-        onClose={handleCloseDialog}
-      />
-
-      <CreateTodoDialog
-        isOpen={isTodoDialogOpen}
-        onOpenChange={setIsTodoDialogOpen}
-        selectedTodo={selectedTodo}
-        onSubmit={handleTodoSubmit}
-        selectedCategoryId={selectedCategoryId}
-      />
-    </div>
+    </ProtectedRoute>
   );
 }
 
@@ -295,7 +315,7 @@ function TodosSection({
 
   if (!selectedCategoryId) {
     return (
-      <div className="glass-card rounded-3xl p-12 text-center border border-gray-100 dark:border-gray-800 min-h-[500px] flex flex-col items-center justify-center">
+      <div className="glass-card rounded-3xl p-12 text-center border border-gray-100 dark:border-gray-800 min-h-125 flex flex-col items-center justify-center">
         <div className="text-gray-300 dark:text-gray-700 mb-6">
           <svg
             className="mx-auto h-32 w-32 opacity-50"
@@ -324,7 +344,7 @@ function TodosSection({
 
   return (
     <div className="space-y-6">
-      <div className="glass-card rounded-3xl p-4 sm:p-6 border border-gray-100 dark:border-gray-800 min-h-[500px]">
+      <div className="glass-card rounded-3xl p-4 sm:p-6 border border-gray-100 dark:border-gray-800 min-h-125">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate max-w-[60%]">
             {selectedCategory?.name}

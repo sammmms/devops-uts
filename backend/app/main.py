@@ -6,6 +6,7 @@ from app.api.routes_todo import router as todo_router
 from app.api.routes_category import router as category_router
 from app.api.routes_dashboard import router as dashboard_router
 from app.api.routes_category_todo import router as category_todo_router
+from app.api.routes_auth import router as auth_router
 from app.utils.response_util import create_json_response
 
 async def http_exception_handler(_, exc: HTTPException):
@@ -33,6 +34,7 @@ def health():
 routes: list[dict[str:APIRouter]] = [
     {
         "health": router,
+        "auth": auth_router,
         "todos": todo_router,
         "categories": category_router,
         "category_todos": category_todo_router,

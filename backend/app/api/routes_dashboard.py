@@ -1,19 +1,38 @@
 from datetime import date, timedelta
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.services.todo_services import TodoServices
 from app.db.todo_database import TodoDatabase
 from app.services.category_services import CategoryServices
 from app.db.category_database import CategoryDatabase
+from app.services.auth_service import decode_access_token
 
-router = APIRouter()
+router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+security = HTTPBearer()
 
 todo_service = TodoServices(db=TodoDatabase())
 category_service = CategoryServices(db=CategoryDatabase())
 
-@router.get("/dashboard/stats", tags=["dashboard"])
-def get_dashboard_stats():
-    todos = todo_service.get_all()
-    categories = category_service.get_all()
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+    """Get current user ID from JWT token"""
+    token = credentials.credentials
+    try:
+        payload = decode_access_token(token)
+        if not payload:
+            raise Exception("Invalid token")
+        user_id = payload.get("sub")
+        if not user_id:
+            raise Exception("Invalid token")
+        return user_id
+    except Exception:
+        raise Exception("Invalid token")
+
+
+@router.get("/stats", tags=["dashboard"])
+async def get_dashboard_stats(current_user: str = Depends(get_current_user)):
+    todos = todo_service.get_all(user_id=current_user)
+    categories = category_service.get_all(whereQuery={"user_id": current_user})
     
     today = date.today()
     next_week = today + timedelta(days=7)

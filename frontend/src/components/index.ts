@@ -9,3 +9,5 @@ export * from "./CategoriesList";
 export * from "./CreateCategoryDialog";
 export * from "./CreateTodoDialog";
 export { Shimmer, CategoriesListShimmer, TodosListShimmer } from "./Shimmer";
+export { ProtectedRoute } from "./ProtectedRoute";
+export * from "./ui";

@@ -11,6 +11,7 @@ class TodoModel(BaseModel):
     description: str | None = None
     completed: bool = False
     category_id: int | None = None
+    user_id: str | None = None
 
 
 class TodoResponseModel(TodoModel):

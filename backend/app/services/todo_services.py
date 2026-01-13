@@ -11,14 +11,15 @@ class TodoServices(BaseServices[TodoModel]):
 
     def get_all(
         self,
+        user_id: str | None = None,
         category_id: int | None = None,
         completed: bool | None = None,
         overdue: bool | None = None,
     ):
-        return self.db.get_all(category_id, completed, overdue)
+        return self.db.get_all(user_id, category_id, completed, overdue)
 
-    def get_todo_by_category(self, category_id: int) -> list[TodoModel]:
-        return self.get_all(category_id)
+    def get_todo_by_category(self, category_id: int, user_id: str | None = None) -> list[TodoModel]:
+        return self.get_all(user_id, category_id)
 
-    def delete_by_category_id(self, category_id: int):
-        return self.db.delete_by_category(category_id)
+    def delete_by_category_id(self, category_id: int, user_id: str | None = None):
+        return self.db.delete_by_category(category_id, user_id)

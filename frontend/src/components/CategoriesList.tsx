@@ -1,7 +1,10 @@
 import type { CategoryModel } from "@/models/CategoryModel";
 import type { TodoModel } from "@/models/TodoModel";
-import { Edit2, Plus, Trash2 } from "lucide-react";
+import { Edit2, Plus, Trash2, AlertTriangle } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import * as Dialog from "@radix-ui/react-dialog";
+import { Cross2Icon } from "@radix-ui/react-icons";
+import { useState } from "react";
 
 interface CategoriesListProps {
   categories: CategoryModel[];
@@ -22,6 +25,12 @@ export const CategoriesList = ({
   onDeleteCategory,
   onOpenAddDialog,
 }: CategoriesListProps) => {
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+
+  const handleConfirmDelete = (categoryId: number) => {
+    onDeleteCategory(categoryId);
+    setDeleteConfirmId(null);
+  };
   return (
     <div className="glass-card rounded-3xl p-4 sm:p-6 border border-white/40 dark:border-white/10 shadow-xl">
       <div className="flex items-center justify-between mb-6">
@@ -139,19 +148,90 @@ export const CategoriesList = ({
                     >
                       <Edit2 size={16} />
                     </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteCategory(category.id);
+
+                    <Dialog.Root
+                      open={deleteConfirmId === category.id}
+                      onOpenChange={(open) => {
+                        if (!open) setDeleteConfirmId(null);
                       }}
-                      className={`p-1.5 rounded-lg transition-colors ${
-                        isSelected
-                          ? "text-blue-100 hover:text-white hover:bg-white/20"
-                          : "text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-700"
-                      }`}
                     >
-                      <Trash2 size={16} />
-                    </button>
+                      <Dialog.Trigger asChild>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteConfirmId(category.id);
+                          }}
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            isSelected
+                              ? "text-blue-100 hover:text-white hover:bg-white/20"
+                              : "text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-700"
+                          }`}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </Dialog.Trigger>
+
+                      <Dialog.Portal>
+                        <Dialog.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" />
+                        <Dialog.Content asChild>
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                            transition={{
+                              duration: 0.2,
+                              ease: [0.16, 1, 0.3, 1],
+                            }}
+                            className="fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] w-[90vw] max-w-md bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-2xl z-50 border border-gray-200 dark:border-gray-700"
+                          >
+                            <div className="flex items-start gap-4 mb-4">
+                              <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
+                                <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+                              </div>
+                              <div>
+                                <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">
+                                  Delete Category
+                                </Dialog.Title>
+                                <Dialog.Description className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                  Are you sure you want to delete "
+                                  {category.name}"? This action cannot be
+                                  undone.
+                                </Dialog.Description>
+                              </div>
+                            </div>
+
+                            <div className="flex justify-end gap-3 mt-6">
+                              <Dialog.Close asChild>
+                                <motion.button
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                >
+                                  Cancel
+                                </motion.button>
+                              </Dialog.Close>
+                              <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => handleConfirmDelete(category.id)}
+                                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                              >
+                                Delete
+                              </motion.button>
+                            </div>
+
+                            <Dialog.Close asChild>
+                              <button
+                                className="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                aria-label="Close"
+                              >
+                                <Cross2Icon className="w-4 h-4" />
+                              </button>
+                            </Dialog.Close>
+                          </motion.div>
+                        </Dialog.Content>
+                      </Dialog.Portal>
+                    </Dialog.Root>
                   </div>
                 </motion.div>
               );

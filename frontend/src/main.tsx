@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
+import { Toaster } from "sonner";
 
 // Import the generated route tree
 import { routeTree } from "./routeTree.gen";
@@ -9,6 +10,7 @@ import "./styles.css";
 import reportWebVitals from "./reportWebVitals.ts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NotFound, GlobalError } from "./components";
+import { AuthProvider } from "./contexts/AuthContext";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -44,7 +46,10 @@ if (rootElement && !rootElement.innerHTML) {
     <StrictMode>
       <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
         <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
+          <AuthProvider>
+            <RouterProvider router={router} />
+            <Toaster position="bottom-center" />
+          </AuthProvider>
         </QueryClientProvider>
       </ThemeProvider>
     </StrictMode>
