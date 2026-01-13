@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "@/config";
+import axiosInstance from "@/utils/axios_instance";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 interface User {
@@ -43,32 +43,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const login = async (emailOrUsername: string, password: string) => {
     try {
-      // Check if it's an email or username
       const isEmail = emailOrUsername.includes("@");
       const body = isEmail
         ? { email: emailOrUsername, password }
         : { username: emailOrUsername, password };
 
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const response = await axiosInstance.post("/auth/login", body);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || "Login failed");
-      }
-
-      const data = await response.json();
-      const { access_token, user: userData } = data.data;
+      const { access_token, user: userData } = response.data.data;
 
       localStorage.setItem("authToken", access_token);
       localStorage.setItem("authUser", JSON.stringify(userData));
       setToken(access_token);
       setUser(userData);
-    } catch (error) {
-      throw error;
+    } catch (error: any) {
+      const message =
+        error.response?.data?.detail || error.message || "Login failed";
+      throw new Error(message);
     }
   };
 
@@ -78,26 +69,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     password: string
   ) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, username, password }),
+      const response = await axiosInstance.post("/auth/register", {
+        email,
+        username,
+        password,
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || "Registration failed");
-      }
-
-      const data = await response.json();
-      const { access_token, user: userData } = data.data;
+      const { access_token, user: userData } = response.data.data;
 
       localStorage.setItem("authToken", access_token);
       localStorage.setItem("authUser", JSON.stringify(userData));
       setToken(access_token);
       setUser(userData);
-    } catch (error) {
-      throw error;
+    } catch (error: any) {
+      const message =
+        error.response?.data?.detail || error.message || "Registration failed";
+      throw new Error(message);
     }
   };
 
