@@ -311,6 +311,8 @@ devops-uts/
 ├── backend/                    # Python FastAPI Backend
 │   ├── Containerfile          # Docker image definition
 │   ├── requirements.txt        # Python dependencies
+│   ├── tests/                  # Test suite
+│   │   └── test_api.py        # API endpoint tests
 │   └── app/
 │       ├── main.py            # FastAPI app initialization
 │       ├── dependencies.py    # Dependency injection
@@ -430,28 +432,25 @@ podman-compose -f legacy/podman-compose.yml down
 
 ### Backend Tests
 
-A comprehensive test suite is included that validates all 21 backend API routes:
+The project includes a comprehensive test suite `tests/test_api.py` that validates all 21 backend API routes using a **Local Mock Data Source**. This allows independent testing of logic without database dependencies.
 
 ```bash
 # Navigate to backend directory
 cd backend
 
 # Run all tests
-python3 test_all_routes.py
-
-# Or with pytest for CI/CD
-python3 -m pytest test_all_routes.py -v
+python -m tests.test_api
 ```
 
 **Test Coverage:**
 
-- ✅ Authentication (register, login, token refresh, current user)
-- ✅ Categories CRUD (create, read, update, delete)
-- ✅ Todos CRUD (create, read, update, delete, filter)
-- ✅ Dashboard statistics
-- ✅ Security (invalid token rejection, missing auth)
+- ✅ **Authentication**: Register, Login, Refresh Token, User Profile
+- ✅ **Categories CRUD**: Create, Read, Update, Delete
+- ✅ **Todos CRUD**: Create, Read, Update, Delete with filters
+- ✅ **Dashboard**: Statistics aggregation
+- ✅ **Security**: Auth guards, Invalid tokens
 
-Tests run in 1-3 seconds with automatic test data setup and cleanup.
+The tests automatically set `REPOSITORY_MODE=local` to use in-memory mock data, ensuring tests run in <1 second.
 
 ---
 

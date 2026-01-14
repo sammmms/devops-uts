@@ -188,32 +188,39 @@ Headers: Authorization: Bearer <token>
     ┌────────▼──────────────────▼──────────┴───────┐
     │        Kubernetes Service Layer               │
     │   ├── Backend Service (NodePort:30005)       │
-    │   └── Frontend Service (NodePort:30003)      │
+    │   ├── Frontend Service (NodePort:30003)      │
+    │   └── Postgres Service (ClusterIP:5432)      │
     └────────┬──────────────────────────────────────┘
              │
-    ┌────────▼──────────────────────────────┐
-    │       Kubernetes Cluster (k3s)        │
-    │  ┌─────────────────────────────────┐  │
-    │  │    Backend Deployment            │  │
-    │  │  ├── Pod 1 (FastAPI App)        │  │
-    │  │  └── Pod 2 (FastAPI App)        │  │
-    │  │  (Min: 2, Max: 3 via HPA)       │  │
-    │  └─────────────────────────────────┘  │
-    │  ┌─────────────────────────────────┐  │
-    │  │    Frontend Deployment           │  │
-    │  │  └── Pod 1 (Nginx)              │  │
-    │  │  (Static: 1 replica)            │  │
-    │  └─────────────────────────────────┘  │
-    │  ┌─────────────────────────────────┐  │
-    │  │  Metrics Server (HPA Monitor)    │  │
-    │  └─────────────────────────────────┘  │
-    └────────┬──────────────────────────────┘
-             │
-    ┌────────▼──────────────┐
-    │  Persistent Volume    │
-    │  (Todos/Categories)   │
-    │  JSON Local Storage   │
-    └───────────────────────┘
+    ┌────────▼──────────────────────────────────────┐
+    │       Kubernetes Cluster (k3s)                │
+    │  ┌─────────────────────────────────────────┐  │
+    │  │    Backend Deployment                    │  │
+    │  │  ├── Pod 1 (FastAPI + SQLAlchemy)       │  │
+    │  │  └── Pod 2 (FastAPI + SQLAlchemy)       │  │
+    │  │  (Min: 2, Max: 3 via HPA)               │  │
+    │  └──────────────────┬──────────────────────┘  │
+    │                     │ DB Connection           │
+    │  ┌──────────────────▼──────────────────────┐  │
+    │  │    PostgreSQL Deployment                 │  │
+    │  │  └── Pod 1 (postgres:16-alpine)         │  │
+    │  │  (Replicas: 1)                          │  │
+    │  └──────────────────┬──────────────────────┘  │
+    │                     │                         │
+    │  ┌──────────────────▼──────────────────────┐  │
+    │  │  PersistentVolumeClaim (postgres-pvc)    │  │
+    │  │  /var/lib/postgresql/data               │  │
+    │  └─────────────────────────────────────────┘  │
+    │                                               │
+    │  ┌─────────────────────────────────────────┐  │
+    │  │    Frontend Deployment                   │  │
+    │  │  └── Pod 1 (Nginx)                      │  │
+    │  │  (Static: 1 replica)                    │  │
+    │  └─────────────────────────────────────────┘  │
+    │  ┌─────────────────────────────────────────┐  │
+    │  │  Metrics Server (HPA Monitor)            │  │
+    │  └─────────────────────────────────────────┘  │
+    └───────────────────────────────────────────────┘
 ```
 
 ### 2.2 Backend Architecture (FastAPI + Clean Architecture)
@@ -225,6 +232,8 @@ backend/
 ├── Containerfile              # Docker image definition
 ├── requirements.txt           # Python dependencies
 ├── .env                       # Environment variables
+├── tests/                     # Test suite
+│   └── test_api.py            # API endpoint tests
 └── app/
     ├── main.py               # FastAPI app initialization
     ├── dependencies.py       # Dependency injection (repository factories)
@@ -825,8 +834,9 @@ VPS_KEY               # SSH private key (for authentication)
 
 **Storage:**
 
-- Uses node-local JSON files (no PersistentVolume)
-- Production: Would use PostgreSQL or managed database
+- Uses **PostgreSQL** (deployed via Kubernetes) with PersistentVolumeClim
+- **Local Development:** Can use JSON-based local storage (via `REPOSITORY_MODE=local`) or PostgreSQL
+- **Data Persistence:** `/var/lib/postgresql/data` mounted to PVC
 
 **Networking:**
 
@@ -867,11 +877,55 @@ VPS_KEY               # SSH private key (for authentication)
 
 ### 3.6 Development & Testing Files
 
-**Backend Testing:**
+#### Backend Test Suite (`tests/test_api.py`)
 
-- File: `backend/test_uncat.py`
-- Unit tests for API endpoints
-- Run locally: `pytest` or `python -m pytest`
+A comprehensive test suite is included to validate all API endpoints using a mock data source (Local Repository). This ensures testing without requiring a running database.
+
+**Test Coverage (21 Tests):**
+
+1.  **Health Check**: Verifies API availability
+2.  **Authentication**:
+    - User Registration & Duplicate Check
+    - Login (JWT Token retrieval)
+    - Get Current User
+    - Token Refresh
+3.  **Categories**:
+    - Create, List, Get by ID, Update, Delete
+4.  **Todos**:
+    - Create, List (with/without filters), Get by ID, Update, Delete
+5.  **Dashboard**:
+    - Statistics verification (total, completed, pending)
+6.  **Security**:
+    - Invalid Token handling
+    - Missing Authentication handling
+
+**How to Run Tests:**
+
+```bash
+cd backend
+python -m tests.test_api
+```
+
+**Output:**
+
+```text
+============================================================
+BACKEND API ROUTE TESTS (with Local Mock DataSource)
+============================================================
+
+[1] Testing Health Check...
+  ✓ Health check passed
+
+[2] Testing User Registration...
+  ✓ User registered successfully (ID: 1)
+  ✓ Token obtained: eyJhbGciOiJIUzI1NiIsIn...
+
+...
+
+============================================================
+✅ ALL TESTS PASSED!
+============================================================
+```
 
 **Frontend Build Configuration:**
 
@@ -888,261 +942,111 @@ VPS_KEY               # SSH private key (for authentication)
 
 ## 4. Naskah Video Penjelasan Implementasi Kubernetes/Openshift
 
-### 📹 VIDEO 1: Kubernetes/Openshift Implementation Explanation
+### 📹 VIDEO 1: Application Architecture & Kubernetes Deployment
 
 ---
 
-**DURATION:** 12-15 minutes
-**TOPICS:** Architecture Overview, Kubernetes Setup, Deployment Strategy, Service Exposure
+**DURATION:** ~5 Minutes
+**TOPICS:** Architecture, PostgreSQL, Kubernetes Manifests, Ingress
 
 ---
 
-#### **SCENE 1: INTRODUCTION [0:00-1:00]**
+#### **SCENE 1: INTRODUCTION & APP OVERVIEW [0:00-0:45]**
 
-**Visual:** Title slide with application name
+**Visual:**
+
+- Buka browser, tunjukkan halaman Login aplikasi.
+- Login dan demokan fitur: Tambah Todo, Filter Category, Dashboard.
+
 **Script:**
+"Halo! Di video ini saya akan mendemokan **DevOps-UTS**, sebuah aplikasi manajemen tugas berbasis Cloud Native.
 
-"Assalamu alaikum, dalam video ini kami akan menjelaskan implementasi Kubernetes untuk aplikasi Todo kami. Aplikasi ini dirancang sebagai studi kasus penerapan DevOps modern dengan containerization dan orchestration.
+Aplikasi ini tidak hanya sekedar Todo List biasa, tapi dibangun dengan **Clean Architecture** yang modern:
 
-Kami akan membahas:
+- **Frontend:** React 19 dengan Tailwind CSS v4 untuk UI yang responsif.
+- **Backend:** FastAPI dengan **PostgreSQL** database.
+- **Security:** JWT Authentication untuk login yang aman.
 
-- Arsitektur Kubernetes yang kami gunakan
-- Bagaimana aplikasi dideploy di Kubernetes
-- Service exposure dan networking
-- Monitoring dan scaling otomatis
-
-Mari kita mulai dengan memahami arsitektur aplikasi kami."
+Mari kita bedah arsitekturnya!"
 
 ---
 
-#### **SCENE 2: ARCHITECTURE OVERVIEW [1:00-3:30]**
+#### **SCENE 2: ARCHITECTURE & DATABASE [0:45-1:45]**
 
-**Visual:** Architecture diagram (draw or display as slide)
+**Visual:**
+
+- Tampilkan Diagram Arsitektur (yang ada di documentation.md).
+- Switch ke VS Code, buka `backend/app` folder structure.
+
 **Script:**
+"Secara arsitektur, kami memisahkan Frontend dan Backend menjadi service yang independen.
 
-"Aplikasi kami terdiri dari dua komponen utama: Frontend dan Backend.
+Backend menggunakan **Clean Architecture** dengan layer:
 
-Frontend adalah React application yang kami build menggunakan Vite. Aplikasi ini merupakan single-page application yang berjalan di browser user. Frontend kami containerize menggunakan Docker dengan base image Nginx untuk production.
+- **Repository Pattern:** Memisahkan logic database.
+- **Usecases:** Menangani business rules.
+- **PostgreSQL:** Kami migrasi dari JSON file ke database PostgreSQL 16 untuk reliability data.
 
-Backend adalah FastAPI application yang dibangun dengan Python. FastAPI menyediakan REST API yang diakses oleh frontend untuk CRUD operations pada todos dan categories. Backend juga containerize menggunakan Docker.
-
-Kedua komponen ini di-deploy sebagai Kubernetes Deployments yang terpisah. Ini memungkinkan scaling independen dan isolasi masalah.
-
-Komunikasi antara Frontend dan Backend terjadi melalui REST API. Frontend menggunakan axios untuk HTTP requests, dan CORS middleware di backend memungkinkan cross-origin requests.
-
-Di level Kubernetes, kami menggunakan Services untuk expose pods. Untuk Frontend dan Backend, kami gunakan NodePort Services yang memungkinkan akses eksternal melalui node IP dan port yang spesifik."
+Code structure kami di VS Code sangat rapi, memisahkan API routes, models, dan logic database di folder berbeda. Ini memudahkan maintenance dan scaling."
 
 ---
 
-#### **SCENE 3: CONTAINERIZATION DETAILS [3:30-5:30]**
+#### **SCENE 3: KUBERNETES MANIFESTS [1:45-3:15]**
 
-**Visual:** Show Containerfile for backend and frontend
+**Visual:**
+
+- Buka folder `k8s/` di VS Code.
+- Tunjukkan `backend-deploy.yaml`, `postgres/postgres-deployment.yaml`, lalu `ingress.yaml`.
+
 **Script:**
+"Untuk deployment, kami menggunakan Kubernetes. Semua konfigurasi ada di folder `k8s`.
 
-"Sebelum deploy ke Kubernetes, aplikasi harus di-containerize. Mari kita lihat bagaimana kami membuat container images.
-
-Untuk Backend, kami menggunakan Python 3.11-slim sebagai base image. Ini lebih kecil dari Python image standar, yang penting untuk CI/CD efficiency.
-
-Kami install dependencies dari requirements.txt yang berisi: FastAPI, Uvicorn, dan Pydantic. Kemudian copy aplikasi code dan expose port 5000 tempat FastAPI berjalan.
-
-Untuk Frontend, kami menggunakan multi-stage build. Build stage menggunakan Node 20-alpine untuk install dependencies dan build React application. Hasil build adalah folder dist dengan static HTML, CSS, dan JavaScript files.
-
-Stage kedua menggunakan Nginx alpine sebagai base image. Kami copy hasil build ke Nginx document root. Ini menghasilkan image yang sangat kecil, hanya sekitar 50MB untuk frontend dibanding 200MB+ jika kami copy Node image.
-
-Images ini kemudian di-push ke Docker Hub registry sehingga dapat diakses dari mana saja, termasuk Kubernetes cluster kami di DigitalOcean VPS."
+1.  **Backend Deployment:** Menjalankan 2 replika FastAPI container. Kami menyuntikkan koneksi database via environment variables yang aman dari Secrets.
+2.  **PostgreSQL:** Database berjalan di pod sendiri dengan **PersistentVolumeClaim (PVC)**. Ini memastikan data tetap aman (persist) meskipun pod restart.
+3.  **Frontend:** Static Nginx server, cukup 1 replika.
+4.  **Ingress:** Kami gunakan **Traefik Ingress Controller** untuk routing traffic dan SSL otomatis melalui domain `todo.wsnsam.my.id`."
 
 ---
 
-#### **SCENE 4: KUBERNETES CLUSTER SETUP [5:30-7:00]**
+#### **SCENE 4: DEPLOYMENT DEMO [3:15-4:15]**
 
-**Visual:** Terminal showing `kubectl` commands or k3s dashboard
+**Visual:**
+
+- Buka Terminal.
+- Jalankan `kubectl get pods`, `kubectl get services`, `kubectl get pvc`.
+- Tunjukkan browser mengakses `https://todo.wsnsam.my.id`.
+
 **Script:**
+"Mari lihat cluster kami yang sedang berjalan.
+(Ketik `kubectl get pods`)
+Terlihat semua komponen berjan:
 
-"Kami menggunakan k3s sebagai Kubernetes distribution. k3s adalah lightweight Kubernetes yang dioptimasi untuk edge computing dan small footprint environments. Perfect untuk VPS kecil kami.
+- 2 Pods Backend untuk High Availability.
+- 1 Pod Postgres untuk database.
+- 1 Pod Frontend.
 
-k3s sudah terinstall di DigitalOcean VPS dengan konfigurasi default. Secara otomatis include:
+(Ketik `kubectl get pvc`)
+Persistent Volume juga statusnya 'Bound', artinya storage database sudah siap.
 
-- Kubernetes control plane
-- Metrics Server untuk monitoring resource usage
-- Traefik Ingress Controller untuk routing external traffic
-- Container runtime (containerd)
-
-Kami dapat melihat status cluster dengan command:
-
-```
-kubectl get nodes
-kubectl cluster-info
-```
-
-k3s configuration file biasanya di /etc/rancher/k3s/k3s.yaml, yang kami gunakan untuk management dari local machine dengan kubeconfig.
-
-Cluster kami adalah single-node setup, artinya control plane dan worker roles berjalan di node yang sama. Ini sufficient untuk aplikasi skala kecil-menengah seperti kami."
+Aplikasi dapat diakses publik melalui domain https://todo.wsnsam.my.id yang sudah diamankan dengan HTTPS."
 
 ---
 
-#### **SCENE 5: DEPLOYMENT MANIFESTS [7:00-9:30]**
+#### **SCENE 5: CLOSING [4:15-5:00]**
 
-**Visual:** Show k8s manifest files in editor, deploy them via kubectl
+**Visual:**
+
+- Kembali ke Dashboard aplikasi.
+- Tunjukkan slide Summary singkat.
+
 **Script:**
+"Kesimpulannya, arsitektur ini memberikan:
 
-"Untuk deploy aplikasi ke Kubernetes, kami define desired state dalam YAML manifests. Kubernetes akan manage achieving dan maintaining state ini.
+1.  **Scalability:** Frontend dan Backend bisa di-scale independen.
+2.  **Reliability:** Data aman di PostgreSQL dengan Persistent Storage.
+3.  **Security:** Akses terenkripsi HTTPS dan JWT Auth.
 
-Mari lihat Backend Deployment manifest. Deployment ini define:
-
-- Aplikasi apa yang ingin kami run: image dari Docker Hub
-- Berapa banyak replicas: minimal 2 pods untuk high availability
-- Bagaimana pods dikonfigurasi: container port, resource requests/limits
-
-Resource requests sangat penting. Ini tell Kubernetes berapa resources yang dibutuhkan pod untuk operate. Requests ini used oleh scheduler untuk memutuskan node mana yang suitable.
-
-Resource limits adalah maximum resources yang boleh dikonsumsi. Jika pod exceed limits, Kubernetes akan kill dan restart pod tersebut.
-
-Kami juga set imagePullPolicy ke Always, yang means Kubernetes selalu pull latest image dari registry. Ini penting untuk automatic updates saat kami push image baru.
-
-Frontend Deployment similar, tapi kami hanya run 1 replica karena frontend static content tidak perlu scaling.
-
-Setiap deployment dikombinasikan dengan Service. Service adalah abstraction yang define cara mengakses pods. NodePort Service expose pods pada node IP + specific port. Backend accessible di port 30005, frontend di port 30003."
-
----
-
-#### **SCENE 6: INGRESS CONFIGURATION [9:30-11:00]**
-
-**Visual:** Show ingress.yaml and diagram of traffic routing
-**Script:**
-
-"Untuk production, kami tidak ingin akses aplikasi melalui NodePort langsung. Kami menggunakan Ingress controller untuk advanced routing dan SSL/TLS termination.
-
-Ingress kami configure dengan domain todo.wsnsam.my.id. Traefik Ingress Controller (yang included di k3s) akan handle:
-
-- TLS certificate management via Let's Encrypt
-- HTTP to HTTPS redirect
-- Path-based routing
-
-Routing rules yang kami define:
-
-- Path /api\* masuk ke Backend Service
-- Semua path lain masuk ke Frontend Service
-
-Ini elegant solution karena users hanya perlu akses satu domain. Frontend akan hit API di path /api secara transparently.
-
-Traefik automatically request dan renew SSL certificates dari Let's Encrypt. Certificate stored sebagai Kubernetes Secret, dan Traefik handle renewal sebelum expiry.
-
-Dari user perspective, mereka access aplikasi via https://todo.wsnsam.my.id dengan green padlock indicator, indicating secure connection."
-
----
-
-#### **SCENE 7: DEPLOYMENT PROCESS [11:00-13:00]**
-
-**Visual:** Terminal showing kubectl apply commands and pod creation
-**Script:**
-
-"Untuk deploy aplikasi ke Kubernetes, kami simply apply manifests menggunakan kubectl:
-
-```
-kubectl apply -f k8s/
-```
-
-Command ini akan:
-
-1. Create atau update semua resources yang didefined dalam files
-2. Kubernetes scheduler memilih node mana yang suitable untuk run pods
-3. Container images di-pull dari Docker Hub
-4. Pods di-create dan containers started
-
-Kami dapat monitor deployment dengan:
-
-```
-kubectl get deployments
-kubectl get pods
-kubectl describe deployment backend
-```
-
-Jika ada changes, kami update manifest files dan apply lagi. Kubernetes secara intelligent determine apa yang berubah dan melakukan rolling update.
-
-Rolling update ensure zero downtime:
-
-- Update pod replicas satu per satu
-- Graceful termination signal dikirim ke old pods
-- New pods harus healthy sebelum lanjut ke pod berikutnya
-
-Jika ada issues, kami dapat rollback dengan:
-
-```
-kubectl rollout undo deployment/backend
-```
-
-Kubernetes akan return ke previous working version."
-
----
-
-#### **SCENE 8: VERIFICATION & TESTING [13:00-14:30]**
-
-**Visual:** Browser showing application, kubectl commands
-**Script:**
-
-"Setelah deploy, kami verifikasi bahwa aplikasi running correctly.
-
-Pertama, check pods status:
-
-```
-kubectl get pods -o wide
-```
-
-Setiap pod harus dalam status 'Running'. Jika status 'CrashLoopBackOff', itu berarti container sedang crash. Kami dapat debug dengan:
-
-```
-kubectl logs pod_name
-kubectl describe pod pod_name
-```
-
-Kami juga check Services:
-
-```
-kubectl get services
-```
-
-Setiap service harus have CLUSTER-IP dan external port jika NodePort.
-
-Kemudian test akses aplikasi:
-
-- Via NodePort: http://node-ip:30003 untuk frontend, http://node-ip:30005 untuk backend
-- Via Ingress domain: https://todo.wsnsam.my.id
-
-Kami test basic functionality:
-
-- Create todo
-- Fetch todos via API
-- Update completion status
-- Check backend logs untuk verify requests
-
-Jika semua working, deployment successful!"
-
----
-
-#### **SCENE 9: SUMMARY [14:30-15:00]**
-
-**Visual:** Summary slide
-**Script:**
-
-"Recap, Kubernetes provide orchestration platform untuk container applications kami:
-
-- Automated deployment dan scaling
-- Self-healing jika pod crashes
-- Rolling updates untuk zero downtime
-- Service discovery dan load balancing
-- Resource management dan scheduling
-
-Implementasi kami demonstrate best practices:
-
-- Separate deployments untuk frontend dan backend
-- Resource requests dan limits untuk predictable behavior
-- Multi-stage container builds untuk minimal image size
-- Ingress controller untuk production domain dan SSL
-- k3s lightweight distribution suitable untuk small deployments
-
-Dengan Kubernetes, aplikasi kami achieve 24/7 availability, automatic scaling, dan easy updates.
-
-Terima kasih telah menonton! Di video berikutnya, kami akan discuss Horizontal Pod Autoscaling dan CI/CD pipeline kami."
+Di video selanjutnya, kita akan bahas sisi otomatisasi DevOps: Testing, CI/CD, dan Autoscaling. Terima kasih!"
 
 ---
 
@@ -1150,400 +1054,113 @@ Terima kasih telah menonton! Di video berikutnya, kami akan discuss Horizontal P
 
 ## 5. Naskah Video Penjelasan HPA, CI/CD, dan Monitoring
 
-### 📹 VIDEO 2: Horizontal Pod Autoscaling, CI/CD Pipeline, dan Monitoring
+### 📹 VIDEO 2: Testing, CI/CD, Autoscaling & Monitoring
 
 ---
 
-**DURATION:** 15-18 minutes
-**TOPICS:** HPA Configuration, CI/CD Workflow, GitHub Actions, Monitoring Strategy
+**DURATION:** ~5 Minutes
+**TOPICS:** Automated Testing, GitHub Actions, HPA, Monitoring
 
 ---
 
-#### **SCENE 1: INTRODUCTION [0:00-1:00]**
+#### **SCENE 1: INTRO & TESTING [0:00-1:15]**
 
-**Visual:** Title slide
+**Visual:**
+
+- Buka Terminal.
+- Jalankan script testing `python -m tests.test_api`.
+
 **Script:**
+"Assalamu alaikum, kembali lagi di video kedua. Sekarang kita akan fokus pada **Automation** dan **Reliability**.
 
-"Assalamu alaikum, ini adalah video kedua seri Kubernetes implementation kami. Di video pertama, kami discuss deployment aplikasi ke Kubernetes.
+Fondasi dari sistem yang reliable adalah Testing. Kami memiliki 21 Automated Unit Tests untuk Backend.
+(Jalankan command test)
+Lihat, dalam hitungan detik, script memvalidasi:
 
-Kali ini kami focus pada tiga aspek critical:
+- Register & Login User
+- CRUD Category & Todos
+- Validasi Token JWT
 
-1. Horizontal Pod Autoscaler (HPA) - automatic scaling berdasarkan metrics
-2. CI/CD Pipeline - automated build dan deployment
-3. Monitoring - observability dan alerting
-
-Fitur-fitur ini essential untuk production-grade deployment yang dapat maintain service availability 24/7.
-
-Mari kita mulai dengan understanding Horizontal Pod Autoscaler."
-
----
-
-#### **SCENE 2: HORIZONTAL POD AUTOSCALER CONCEPT [1:00-3:30]**
-
-**Visual:** Diagram showing pod replicas scaling, CPU metrics
-**Script:**
-
-"Horizontal Pod Autoscaler adalah Kubernetes resource yang automatically adjust jumlah pod replicas berdasarkan metrics seperti CPU usage atau memory consumption.
-
-Ini solve masalah classic dalam infrastructure: Berapa banyak instances yang harus kami run?
-
-Jika kami run terlalu banyak instances, kami waste resources dan membayar mahal. Jika kami run terlalu sedikit, aplikasi menjadi slow saat traffic tinggi, dan users experience degraded service.
-
-HPA solve ini dengan:
-
-1. Monitor metrics dari pods secara terus-menerus
-2. Calculate desired number of replicas based on current metrics dan target
-3. Automatically scale up saat demand tinggi
-4. Automatically scale down saat demand rendah
-
-Formula yang digunakan HPA:
-
-```
-desiredReplicas = ceil[currentReplicas * (currentMetricValue / targetMetricValue)]
-```
-
-Contoh: Jika kami run 2 replicas dengan average CPU 80%, dan target adalah 60%:
-
-```
-desiredReplicas = ceil[2 * (80 / 60)] = ceil[2.67] = 3 replicas
-```
-
-HPA akan scale dari 2 menjadi 3 replicas untuk mencapai target 60% average CPU."
+Semua test ini berjalan di local mock environment, memastikan kode bebas bug bahkan sebelum di-commit."
 
 ---
 
-#### **SCENE 3: HPA CONFIGURATION [3:30-5:30]**
+#### **SCENE 2: CI/CD PIPELINE [1:15-2:45]**
 
-**Visual:** Show hpa-backend.yaml in editor
+**Visual:**
+
+- Buka Browser, masuk ke Tab "Actions" di repository GitHub.
+- Tunjukkan workflow run terakhir yang sukses.
+- Buka file `.github/workflows/ci-cd.yml` sebentar.
+
 **Script:**
+"Setelah code di-push, **GitHub Actions** mengambil alih. Pipeline CI/CD kami berjalan otomatis:
 
-"Mari lihat HPA configuration kami untuk Backend:
+1.  **Build:** Membuat Docker Image backend dan frontend secara paralel.
+2.  **Push:** Upload image ke Docker Hub registry.
+3.  **Deploy:** Melakukan SSH ke VPS kami dan mengupdate Kubernetes cluster.
 
-```yaml
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: backend
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: backend
-  minReplicas: 2
-  maxReplicas: 3
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: 60
-```
-
-Mari breakdown setiap section:
-
-scaleTargetRef menunjuk target yang ingin di-scale. Dalam hal ini, Deployment bernama 'backend'. HPA akan adjust jumlah replicas dalam deployment ini.
-
-minReplicas: 2 berarti deployment tidak akan scale di bawah 2 pods. Ini ensure minimum availability - jika satu pod crash, masih ada yang lain untuk handle requests.
-
-maxReplicas: 3 berarti deployment tidak akan scale di atas 3 pods. Ini mencegah runaway scaling dan membatasi costs. Limit ini berdasarkan resource availability di cluster kami.
-
-metrics define apa yang dimonitor. Kami monitor CPU resource dengan type Utilization. Target adalah 60% average CPU utilization di semua pods.
-
-Jadi HPA akan:
-
-- Scale up saat average CPU > 60%
-- Scale down saat average CPU < 60%
-- Maintain antara 2 dan 3 replicas
-
-Kami tidak setup HPA untuk Frontend karena frontend static content tidak require scaling. Kami just keep 1 replica yang sufficient."
+Proses ini _Zero Downtime_ berkat strategi Rolling Update Kubernetes. Developer cukup push code, dan sistem akan terupdate sendiri dalam beberapa menit."
 
 ---
 
-#### **SCENE 4: METRICS SERVER REQUIREMENT [5:30-6:30]**
+#### **SCENE 3: HORIZONTAL POD AUTOSCALER (HPA) [2:45-4:00]**
 
-**Visual:** Terminal showing metrics server installation
+**Visual:**
+
+- Buka Terminal. Jalankan `kubectl get hpa`.
+- (Opsional) Tunjukkan grafik penggunaan CPU kalau ada (atau `kubectl top pods`).
+
 **Script:**
+"Bagaimana jika traffic melonjak? Kami menggunakan **Horizontal Pod Autoscaler (HPA)**.
 
-"Untuk HPA bekerja, Kubernetes harus collect metrics dari pods. Ini dilakukan oleh Metrics Server component.
+(Tunjuk metrics di terminal)
+Kami mengonfigurasi HPA untuk memonitor CPU Usage.
 
-Metrics Server:
+- Target kami adalah **60% CPU utilization**.
+- Jika beban naik di atas 60%, Kubernetes otomatis menambah pod baru (Scale Up).
+- Jika beban turun, pod akan dikurangi (Scale Down).
 
-- Run di cluster sebagai separate deployment
-- Periodically scrape kubelet dari setiap node untuk resource metrics
-- Aggregate metrics dan membuat available untuk HPA queries
-- Typically installed by default di managed Kubernetes services
-
-Kami check jika Metrics Server running:
-
-```
-kubectl get deployment metrics-server -n kube-system
-kubectl top nodes
-kubectl top pods
-```
-
-Metrics biasanya available setelah 1-2 menit pod berjalan, karena HPA butuh historical data untuk calculate trends.
-
-Dalam setup k3s kami, Metrics Server sudah included, jadi HPA dapat straight bekerja tanpa configuration tambahan."
+Ini menjamin aplikasi tetap responsif saat ramai, dan hemat biaya saat sepi."
 
 ---
 
-#### **SCENE 5: HPA BEHAVIOR IN ACTION [6:30-8:00]**
+#### **SCENE 4: MONITORING & LOGGING [4:00-4:30]**
 
-**Visual:** Demonstration atau simulation HPA scaling
+**Visual:**
+
+- Jalankan `kubectl top nodes` dan `kubectl top pods`.
+- Jalankan `kubectl logs deployment/backend --tail=20`.
+
 **Script:**
+"Untuk memantau kesehatan server, kami menggunakan built-in monitoring tools.
 
-"Mari understand apa yang terjadi saat HPA melakukan scaling.
+- `kubectl top`: Melihat konsumsi Real-time CPU & Memory.
+- `kubectl logs`: Memeriksa log aplikasi untuk debugging jika ada error.
 
-Scenario: Backend service kami sudden receive banyak traffic. Requests per second meningkat dari 10 menjadi 50 per second.
-
-Timeline:
-
-T=0min: Backend running dengan 2 replicas, average CPU 20% (relaxed)
-
-T=1min: Traffic meningkat. Average CPU naik menjadi 75% across 2 pods.
-
-T=2min: HPA notice average CPU 75% > target 60%. Calculate:
-
-```
-desiredReplicas = ceil[2 * (75 / 60)] = ceil[2.5] = 3 replicas
-```
-
-HPA request Kubernetes scale backend deployment dari 2 menjadi 3 replicas.
-
-T=3min: Kubernetes scheduler place new pod di available node. Container image di-pull, container start.
-
-T=4min: New pod ready dan service load-balancer distribute traffic across 3 pods.
-
-T=5min: Traffic distributed ke 3 pods, average CPU turun menjadi 50%.
-
-Saat traffic normalized dan average CPU turun di bawah 60%, HPA akan scale down. Tapi ada delay (default 5 menit) untuk prevent thrashing - saat scale up dan down terlalu frequently.
-
-Ini elegant scaling mechanism yang ensure applications dapat handle variable load tanpa manual intervention."
+Semuanya transparan dan mudah diakses oleh System Administrator."
 
 ---
 
-#### **SCENE 6: CI/CD PIPELINE INTRODUCTION [8:00-9:00]**
+#### **SCENE 5: CLOSING [4:30-5:00]**
 
-**Visual:** Diagram showing CI/CD workflow
+**Visual:**
+
+- Tampilkan slide penutup atau wajah pembicara.
+
 **Script:**
+"Demikianlah demonstrasi implementasi DevOps kami.
+Dari **Clean Architecture** yang solid, Database **PostgreSQL** yang reliable, hingga otomatisasi penuh dengan **CI/CD** dan **Autoscaling**.
 
-"Sekarang mari discuss CI/CD - Continuous Integration dan Continuous Deployment.
+Sistem ini dirancang untuk:
 
-CI/CD adalah practice dimana code changes automatically tested, built, dan deployed tanpa manual intervention.
+1.  Mudah dikembangkan (Maintainable)
+2.  Aman (Secure)
+3.  Siap untuk Production (Scalable)
 
-Benefits:
-
-- Faster time to market - new features reach users quickly
-- Reduced human error - automated processes consistent dan reliable
-- Continuous feedback - developers immediately know jika code break
-- Easy rollback - jika ada issue, dapat quickly revert ke previous version
-
-CI/CD Pipeline kami:
-
-1. Developer push code ke GitHub master branch
-2. GitHub Actions workflow trigger otomatis
-3. Workflow build container images
-4. Images push ke Docker Hub registry
-5. Workflow deploy updated manifests ke Kubernetes
-6. Kubernetes perform rolling update
-
-Semua ini happen dalam 5-10 menit dari push hingga live di production. Tanpa developer manually building, pushing, atau running kubectl commands."
+Terima kasih telah menonton!"
 
 ---
-
-#### **SCENE 7: GITHUB ACTIONS WORKFLOW [9:00-11:30]**
-
-**Visual:** Show ci-cd.yml workflow file in editor
-**Script:**
-
-"Mari lihat GitHub Actions workflow kami yang define CI/CD pipeline.
-
-File tersimpan di .github/workflows/ci-cd.yml
-
-Struktur workflow:
-
-```yaml
-name: CI/CD Pipeline with Build & Deploy
-on:
-  push:
-    branches: ["master"]
-```
-
-Name adalah identifiable label. on section define trigger - dalam hal ini, push event ke master branch.
-
-Workflow terdiri dari jobs - discrete units of work yang dapat run parallel atau sequential.
-
-Job pertama adalah build-and-push:
-
-```yaml
-build-and-push:
-  name: Build & Push Docker Images
-  runs-on: ubuntu-latest
-```
-
-Ini run di ubuntu-latest runner (GitHub-hosted machine). Setiap step dalam job adalah unit of work.
-
-Step 1 - Checkout code:
-
-```yaml
-uses: actions/checkout@v4
-```
-
-ini pull repository code ke runner machine.
-
-Step 2 - Login ke Docker Hub:
-
-```yaml
-uses: docker/login-action@v3
-with:
-  username: ${{ secrets.DOCKERHUB_USERNAME }}
-  password: ${{ secrets.DOCKERHUB_TOKEN }}
-```
-
-Ini authenticate dengan Docker Hub menggunakan credentials stored dalam GitHub Secrets. Sensitive data seperti passwords tidak hardcoded dalam workflow file.
-
-Step 3 dan 4 - Build dan push images:
-
-```bash
-cd backend
-podman build --platform linux/amd64 -t docker.io/wsnsam/devops-uts_backend .
-podman push docker.io/wsnsam/devops-uts_backend
-```
-
-Kami build container image menggunakan Podman dengan platform amd64 (untuk compatibility dengan deployment target). Image di-tag dengan Docker Hub repository path. Kemudian push ke Docker Hub.
-
-Sama untuk frontend - build Nginx image dari multi-stage Dockerfile.
-
-Job kedua adalah deploy:
-
-```yaml
-deploy:
-  needs: build-and-push
-```
-
-needs keyword mean job ini hanya run setelah build-and-push complete successfully. Job ini SSH ke VPS.
-
-Step 1 - Copy manifests:
-
-```yaml
-uses: appleboy/scp-action@master
-```
-
-ini secure copy k8s manifests dari repository ke VPS.
-
-Step 2 - Deploy via SSH:
-
-```yaml
-uses: appleboy/ssh-action@v1.0.0
-with:
-  host: ${{ secrets.VPS_HOST }}
-  username: ${{ secrets.VPS_USER }}
-  key: ${{ secrets.VPS_KEY }}
-  script: |
-    sudo k3s kubectl apply -f ~/k8s --wait=false
-    sudo k3s kubectl rollout restart deployment backend frontend
-```
-
-Ini SSH ke VPS dan run commands:
-
-- kubectl apply apply latest manifests
-- kubectl rollout restart trigger rolling update untuk ensure new images pulled
-
-Entire workflow complete dengan rollout restart, ensuring latest built images running di production."
-
----
-
-#### **SCENE 8: SECRETS MANAGEMENT [11:30-12:30]**
-
-**Visual:** GitHub Settings > Secrets interface
-**Script:**
-
-"Untuk workflow access external services, kami perlu provide credentials. Ini dilakukan melalui GitHub Secrets.
-
-Secrets yang diperlukan:
-
-DOCKERHUB_USERNAME: Docker Hub account username
-DOCKERHUB_TOKEN: Personal access token dari Docker Hub settings
-VPS_HOST: IP address dari DigitalOcean VPS
-VPS_USER: SSH username (biasanya root)
-VPS_KEY: SSH private key untuk authentication
-
-Secrets di-store secara encrypted dalam GitHub. Tidak visible dalam logs atau workflow files. Saat workflow run, secrets injected sebagai environment variables dan dapat diakses dengan syntax ${{ secrets.SECRET_NAME }}.
-
-Best practice:
-
-- Never hardcode credentials dalam code atau workflows
-- Rotate credentials regularly
-- Use least privilege principle - credentials hanya akses apa yang diperlukan
-- Audit access ke sensitive resources"
-
----
-
-#### **SCENE 9: MONITORING OVERVIEW [12:30-14:00]**
-
-**Visual:** kubectl top commands output, dashboard
-**Script:**
-
-"Monitoring adalah observability praktik untuk understand aplikasi behavior dan detect issues.
-
-Untuk production system, monitoring critical untuk:
-
-- Detect performance issues sebelum users affected
-- Understand resource usage dan capacity planning
-- Historical analysis untuk trending dan forecasting
-- Compliance dan auditing requirements
-
-Monitoring terdiri dari beberapa pillars:
-
-1. Metrics - quantitative measurements seperti CPU, memory, requests per second, latency.
-
-2. Logs - detailed events dari aplikasi dan system components.
-
-3. Traces - detailed request flow across distributed system components.
-
-Di implementasi kami, kami menggunakan lightweight monitoring approach:
-
-kubectl top commands provide real-time metrics:
-
-```
-kubectl top nodes
-kubectl top pods
-kubectl top pods --all-namespaces
-```
-
-Ini menampilkan CPU dan memory usage dari nodes dan pods.
-
-Selain dari Kubernetes built-in metrics, kami dapat access Swagger UI di backend untuk see API documentation dan test endpoints:
-
-```
-http://146.190.82.217:30005/docs
-```
-
-Kami juga monitor container logs:
-
-```
-kubectl logs deployment/backend
-kubectl logs deployment/frontend
-kubectl logs pod_name
-```
-
-Logs help understand apa terjadi saat requests processed, error exceptions, atau startup issues.
-
-Real-time pod monitoring:
-
-```
-kubectl get pods -w
-```
-
-Flag -w untuk watch, continuously update pod status."
-
----
-
-#### **SCENE 10: MONITORING BEST PRACTICES [14:00-15:30]**
-
-**Visual:** Dashboard atau monitoring tool interface
-**Script:**
 
 "Untuk production-grade monitoring, biasanya digunakan dedicated tools:
 
@@ -1797,91 +1414,6 @@ Implementasi Kubernetes dengan HPA dan CI/CD adalah foundation dari modern DevOp
 Terima kasih telah menonton! Semoga video ini helpful dalam understanding production-grade Kubernetes deployment, automatic scaling, dan CI/CD practices.
 
 Jika ada questions atau feedback, silakan comment di bawah. Sampai jumpa di video berikutnya!"
-
----
-
----
-
-## IMPLEMENTATION SUMMARY
-
-### Key Metrics & Performance Indicators
-
-**Application Availability:**
-
-- Target: 99.9% (four nines)
-- SLA: Less than 43 minutes downtime per month
-- Current: Achieved through:
-  - Min 2 replicas for high availability
-  - Automatic pod restart on failure
-  - Rolling updates without downtime
-
-**Scaling Behavior:**
-
-- Min Replicas: 2 (baseline)
-- Max Replicas: 3 (cost constraint)
-- Scale Trigger: 60% average CPU utilization
-- Scale-up Latency: 2-3 minutes
-- Scale-down Latency: 5+ minutes (to prevent thrashing)
-
-**Deployment Frequency:**
-
-- CI/CD triggers on every push to master
-- Build time: ~2 minutes
-- Deploy time: ~3-5 minutes
-- Total time to production: ~5-10 minutes
-
-**Resource Utilization:**
-
-- Backend: CPU 100m request, 400m limit; Memory 128Mi request, 256Mi limit
-- Frontend: No limits (static content, minimal resource usage)
-- Metrics Server: Negligible overhead
-
-### Implementation Checklist
-
-✅ **Kubernetes/Openshift Usage (15 points)**
-
-- Single-node k3s cluster on DigitalOcean VPS
-- Multiple deployments (backend, frontend)
-- Service-based networking (NodePort + Ingress)
-- YAML-based infrastructure as code
-- Proper resource requests and limits
-
-✅ **Horizontal Pod Autoscaler (15 points)**
-
-- HPA manifest configured and applied
-- CPU-based scaling metrics
-- Min 2, Max 3 replicas
-- Automatic scaling tested and verified
-- Metrics Server integrated
-
-✅ **CI/CD Implementation (15 points)**
-
-- GitHub Actions workflow configured
-- Automatic triggers on push to master
-- Container image building and pushing
-- Automatic deployment to Kubernetes
-- Rolling updates without downtime
-
-✅ **Monitoring Implementation (15 points)**
-
-- Kubernetes Metrics Server for resource monitoring
-- kubectl commands for metric inspection
-- Container logs accessible and searchable
-- Health endpoints (/health, /docs)
-- Basic alerting through deployment events
-
-### Technical Debt & Future Improvements
-
-1. **Database:** Migrate from JSON to PostgreSQL for production
-2. **Monitoring:** Implement Prometheus + Grafana for comprehensive dashboards
-3. **Logging:** Setup ELK stack for centralized log aggregation
-4. **Testing:** Implement automated integration tests in CI/CD
-5. **Load Testing:** Add load testing in CI/CD to verify scaling
-6. **Documentation:** Generate API documentation from OpenAPI schema
-7. **Security:** Implement network policies, RBAC, image scanning
-8. **Multi-region:** Setup HA across multiple data centers
-
----
 
 ## REFERENSI DOKUMENTASI
 
