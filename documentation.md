@@ -216,7 +216,7 @@ Headers: Authorization: Bearer <token>
     └───────────────────────┘
 ```
 
-### 2.2 Backend Architecture (FastAPI)
+### 2.2 Backend Architecture (FastAPI + Clean Architecture)
 
 **Struktur Proyek Backend:**
 
@@ -224,8 +224,10 @@ Headers: Authorization: Bearer <token>
 backend/
 ├── Containerfile              # Docker image definition
 ├── requirements.txt           # Python dependencies
+├── .env                       # Environment variables
 └── app/
     ├── main.py               # FastAPI app initialization
+    ├── dependencies.py       # Dependency injection (repository factories)
     ├── api/
     │   ├── routes_auth.py           # Auth endpoints (register, login, me, refresh)
     │   ├── routes_todo.py           # Todo CRUD endpoints
@@ -233,71 +235,99 @@ backend/
     │   ├── routes_category_todo.py  # Category-Todo relations
     │   └── routes_dashboard.py      # Dashboard statistics
     ├── models/
-    │   ├── todo_model.py            # Pydantic Todo schema
-    │   ├── category_model.py        # Pydantic Category schema
-    │   └── user_model.py            # Pydantic User schema
-    ├── services/
-    │   ├── base_services.py         # Base CRUD operations
-    │   ├── todo_services.py         # Todo business logic
-    │   ├── category_services.py     # Category business logic
-    │   └── auth_services.py         # Auth business logic (JWT)
-    ├── db/
-    │   ├── base_database.py         # Abstract DB class
-    │   ├── todo_database.py         # Todo persistence
-    │   ├── category_database.py     # Category persistence
-    │   ├── user_database.py         # User persistence
-    │   └── local/
-    │       ├── todos.json           # Todo data store
-    │       ├── categories.json      # Category data store
-    │       └── users.json           # User data store
+    │   ├── orm/                     # SQLAlchemy ORM models
+    │   │   ├── __init__.py          # Model exports
+    │   │   ├── todo.py              # Todo table model
+    │   │   ├── category.py          # Category table model
+    │   │   └── user.py              # User table model
+    │   └── pydantic/                # Pydantic schemas
+    │       ├── todo_model.py        # Todo request/response schema
+    │       ├── category_model.py    # Category schema
+    │       └── user_model.py        # User auth schema
+    ├── interfaces/
+    │   └── repositories/            # Abstract repository interfaces
+    │       ├── todo_repository.py   # ITodoRepository interface
+    │       ├── category_repository.py # ICategoryRepository interface
+    │       └── user_repository.py   # IUserRepository interface
+    ├── repositories/
+    │   ├── local/                   # JSON-based implementations
+    │   │   ├── todo_repository.py
+    │   │   ├── category_repository.py
+    │   │   └── user_repository.py
+    │   └── remote/                  # PostgreSQL implementations
+    │       ├── todo_repository.py
+    │       ├── category_repository.py
+    │       └── user_repository.py
+    ├── usecases/                    # Business logic layer
+    │   ├── auth_usecase.py          # Authentication logic (JWT)
+    │   ├── todo_usecase.py          # Todo operations
+    │   └── category_usecase.py      # Category operations
+    ├── datasources/
+    │   ├── session.py               # SQLAlchemy database session
+    │   ├── local_datasource.py      # Local JSON file access
+    │   └── remote_datasource.py     # Remote DB connection
     └── utils/
         └── response_util.py         # Response formatting helpers
 ```
+
+**Clean Architecture Layers:**
+
+1. **API Layer (routes)** - HTTP endpoints and request handling
+2. **UseCase Layer** - Business logic and orchestration
+3. **Repository Layer** - Data access abstraction
+4. **DataSource Layer** - Actual data storage (PostgreSQL or JSON)
 
 **Key Components:**
 
 1. **main.py** - FastAPI Application Setup
 
    - Creates FastAPI app with CORS middleware
-   - Includes custom exception handlers
-   - Mounts all route modules (health, todos, categories, etc.)
+   - Database initialization on startup (auto-creates tables)
+   - Environment-based repository mode (`REPOSITORY_MODE=local|remote`)
    - Exposes Swagger UI at `/docs` and ReDoc at `/redoc`
 
-2. **Models (Pydantic):**
+2. **ORM Models (SQLAlchemy):**
 
    ```python
-   # TodoModel
-   - id: int (optional)
-   - name: str (required)
-   - deadline: date (optional)
-   - description: str (optional)
-   - completed: bool (default: False)
-   - category_id: int (optional)
+   # Todo (ORM)
+   - id: Integer (Primary Key, auto-increment)
+   - name: String (required)
+   - deadline: Date (optional)
+   - description: Text (optional)
+   - completed: Boolean (default: False)
+   - category_id: Integer (Foreign Key to Category)
+   - user_id: Integer (Foreign Key to User)
 
-   # CategoryModel
-   - id: int (optional)
-   - name: str (required)
+   # Category (ORM)
+   - id: Integer (Primary Key)
+   - name: String (required)
+   - user_id: Integer (Foreign Key to User)
+
+   # User (ORM)
+   - id: Integer (Primary Key)
+   - email: String (unique)
+   - username: String (unique)
+   - hashed_password: String
    ```
 
-3. **Database Layer:**
+3. **Repository Pattern:**
 
-   - Singleton pattern implementation
-   - JSON file-based storage (`app/db/local/`)
-   - Supports filtering, searching, and CRUD operations
-   - Thread-safe operations
+   - Interface-based abstraction (`ITodoRepository`, `ICategoryRepository`, `IUserRepository`)
+   - Dual implementations: Local (JSON files) and Remote (PostgreSQL)
+   - `REPOSITORY_MODE` environment variable switches between modes
+   - Dependency injection via `dependencies.py`
 
-4. **Service Layer:**
+4. **UseCase Layer:**
 
    - Business logic encapsulation
    - Filter operations (by category, completion status, overdue date)
-   - Validation and consistency checks
-   - Separation of concerns from routes
+   - User-scoped data access
+   - JWT token generation and validation
 
-5. **API Routes:**
-   - RESTful endpoint design
-   - Comprehensive error handling (404, 422, 500)
-   - Consistent JSON response format
-   - Input validation via Pydantic
+5. **Database Session (PostgreSQL):**
+   - SQLAlchemy with connection pooling
+   - Environment-based configuration (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`)
+   - Auto table creation on startup
 
 **Response Format:**
 
@@ -326,55 +356,62 @@ frontend/
 ├── vite.config.ts            # Vite configuration
 ├── tsconfig.json             # TypeScript configuration
 ├── biome.json                # Code formatter config
+├── nginx.conf                # Nginx routing configuration
 ├── index.html                # HTML entry point
 ├── public/                   # Static assets
 │   ├── manifest.json
+│   ├── favicon.ico
 │   └── robots.txt
 └── src/
     ├── main.tsx              # React app entry point
     ├── config.ts             # Configuration constants
-    ├── styles.css            # Global styles
+    ├── styles.css            # Global styles (Tailwind v4)
     ├── reportWebVitals.ts    # Performance metrics
     ├── routeTree.gen.ts      # Auto-generated routes (TanStack Router)
     ├── components/
-    │   ├── CategoriesList.tsx      # List all categories
-    │   ├── CategoryCard.tsx        # Category display card
+    │   ├── CategoriesList.tsx      # List all categories with filtering
+    │   ├── CategoryCard.tsx        # Category display card with actions
     │   ├── CategoryForm.tsx        # Category creation/edit form
     │   ├── CreateCategoryDialog.tsx # Modal for new category
     │   ├── CreateTodoDialog.tsx    # Modal for new todo
-    │   ├── DatePicker.tsx          # Date selection component
-    │   ├── Form.tsx                # Base form component
+    │   ├── DatePicker.tsx          # Custom date picker with year/month
+    │   ├── Form.tsx                # Reusable form component
     │   ├── GlobalError.tsx         # Error boundary component
-    │   ├── Header.tsx              # App header/navigation
+    │   ├── Header.tsx              # App header with navigation
     │   ├── NotFound.tsx            # 404 page
-    │   ├── Shimmer.tsx             # Loading skeleton
-    │   ├── TodoCard.tsx            # Todo display card
-    │   ├── TodosList.tsx           # List all todos
+    │   ├── ProtectedRoute.tsx      # Auth guard wrapper
+    │   ├── Shimmer.tsx             # Loading skeleton animations
+    │   ├── SmartFAB.tsx            # Context-aware floating action button
+    │   ├── TodoCard.tsx            # Todo card with edit/delete
+    │   ├── TodosList.tsx           # Animated todos list
+    │   ├── ui/                     # Primitive UI components
     │   └── index.ts                # Component exports
     ├── contexts/
     │   ├── ThemeContext.tsx        # Dark/Light mode context
-    │   └── AuthContext.tsx         # User authentication context
+    │   └── AuthContext.tsx         # User authentication context (JWT)
     ├── models/
     │   ├── CategoryModel.ts        # TypeScript Category interface
     │   └── TodoModel.ts            # TypeScript Todo interface
     ├── routes/
-    │   ├── __root.tsx              # Root layout
-    │   ├── index.tsx               # Home/Dashboard page (protected)
-    │   ├── todos.tsx               # Todos listing page (protected)
-    │   ├── categories.tsx          # Categories page (protected)
+    │   ├── __root.tsx              # Root layout with providers
+    │   ├── index.tsx               # Landing page (public)
+    │   ├── dashboard.tsx           # Dashboard with stats (protected)
+    │   ├── todos.tsx               # Todos management page (protected)
+    │   ├── categories.tsx          # Categories management (protected)
     │   ├── about.tsx               # About page (protected)
     │   ├── login.tsx               # Login page (public)
     │   └── register.tsx            # Registration page (public)
     └── utils/
-        └── axios_instance.ts       # HTTP client configuration
+        ├── axios_instance.ts       # Axios with auth interceptors
+        └── index.ts                # Utility exports
 ```
 
 **Key Technologies:**
 
-1. **React 19 + Vite:**
+1. **React 19 + Vite 6:**
 
    - Lightning-fast development server
-   - Optimized production builds
+   - Optimized production builds with code splitting
    - Hot module replacement (HMR)
 
 2. **TanStack Router:**
@@ -391,78 +428,110 @@ frontend/
    - Background refetching
    - Optimistic updates
 
-4. **UI Components:**
+4. **UI Components (16 total):**
 
-   - Radix UI (headless components)
-   - Tailwind CSS (utility-first styling)
-   - Motion (animations)
-   - Lucide React (icons)
+   - Radix UI (headless components: Dialog, Select, Checkbox)
+   - Tailwind CSS v4 (utility-first styling)
+   - Motion library (animations & transitions)
+   - Lucide React (icon library)
+   - Sonner (toast notifications)
 
 5. **Development Tools:**
    - Biome (fast formatter & linter)
-   - TypeScript (type safety)
+   - TypeScript 5.7 (type safety)
    - Vitest (unit testing)
-   - ESLint/Prettier alternatives
 
 **Build Process:**
 
 ```bash
 npm run build
-# → TypeScript checking
-# → Vite optimized production build
+# → Vite optimize (dependency pre-bundling)
+# → TypeScript checking (tsc --noEmit)
+# → Vite production build with manual chunks
 # → Output: dist/ folder (static files)
 ```
 
 **Port:** 3000 (dev), 80 (production via Nginx)
 
-### 2.4 Database Design
+### 2.4 Database Design (PostgreSQL + SQLAlchemy)
 
-**Local JSON Storage Structure:**
+**Database Architecture:**
 
-**todos.json:**
+The application uses PostgreSQL as the primary database in production, with an optional JSON-based local storage for development. Database operations are abstracted through SQLAlchemy ORM and the Repository pattern.
 
-```json
-{
-  "1": {
-    "id": 1,
-    "name": "Buy groceries",
-    "deadline": "2026-01-20",
-    "description": "Weekly grocery shopping",
-    "completed": false,
-    "category_id": 1
-  },
-  "2": {
-    "id": 2,
-    "name": "Complete project",
-    "deadline": "2026-01-15",
-    "description": null,
-    "completed": true,
-    "category_id": 2
-  }
-}
+**Database Tables (PostgreSQL):**
+
+```sql
+-- Users Table
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    hashed_password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Categories Table
+CREATE TABLE categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Todos Table
+CREATE TABLE todos (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    deadline DATE,
+    completed BOOLEAN DEFAULT FALSE,
+    category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
-**categories.json:**
+**Entity Relationships:**
 
-```json
-{
-  "1": {
-    "id": 1,
-    "name": "Shopping"
-  },
-  "2": {
-    "id": 2,
-    "name": "Work"
-  }
-}
+```
+┌─────────────┐       ┌─────────────┐       ┌─────────────┐
+│   Users     │──────<│ Categories  │──────<│    Todos    │
+├─────────────┤ 1:N   ├─────────────┤ 1:N   ├─────────────┤
+│ id (PK)     │       │ id (PK)     │       │ id (PK)     │
+│ email       │       │ name        │       │ name        │
+│ username    │       │ user_id(FK) │       │ description │
+│ hashed_pwd  │       └─────────────┘       │ deadline    │
+└─────────────┘                             │ completed   │
+                                            │ category_id │
+                                            │ user_id(FK) │
+                                            └─────────────┘
 ```
 
-**Database Operations:**
+**Database Operations (via Repository Pattern):**
 
-- **CRUD:** Create, Read, Update, Delete
-- **Filtering:** By category, completion status, overdue date
-- **Relationships:** Cascade delete (delete category → delete associated todos)
-- **Atomic Operations:** File-level locking (implicit via JSON write)
+- **CRUD:** Create, Read, Update, Delete for all entities
+- **Filtering:** By category, completion status, overdue date, user
+- **Relationships:** User-scoped data (todos and categories belong to users)
+- **Cascade Behavior:**
+  - Delete user → Delete all user's categories and todos
+  - Delete category → Set todos' category_id to NULL
+- **Connection Pooling:** SQLAlchemy pools with `pool_size=5, max_overflow=0`
+
+**Environment Configuration:**
+
+```bash
+# PostgreSQL Connection
+DB_HOST=postgres      # Kubernetes service name
+DB_PORT=5432
+DB_NAME=tododb
+DB_USER=todo
+DB_PASSWORD=todopassword
+
+# Repository Mode
+REPOSITORY_MODE=remote  # 'remote' for PostgreSQL, 'local' for JSON files
+```
 
 ---
 
@@ -470,7 +539,7 @@ npm run build
 
 ### 3.1 Containerization Files
 
-#### Backend Containerfile (Multi-stage build ready)
+#### Backend Containerfile
 
 ```dockerfile
 FROM python:3.11-slim

@@ -22,15 +22,19 @@ This project was developed as part of a **DevOps / Cloud Computing** course assi
 ### Backend
 
 - **Framework**: FastAPI (modern async Python framework)
+- **Architecture**: Clean Architecture (usecases, repositories, interfaces)
 - **Validation**: Pydantic (type-safe data validation)
+- **ORM**: SQLAlchemy (database abstraction)
+- **Database**: PostgreSQL 16 (with connection pooling)
 - **Server**: Uvicorn (ASGI server)
-- **Database**: JSON-based local storage (can extend to PostgreSQL)
+- **Auth**: JWT tokens with bcrypt password hashing
 - **API Docs**: Swagger UI & ReDoc (auto-generated)
 
 ### Infrastructure & DevOps
 
 - **Containerization**: Docker/Podman (multi-stage builds)
 - **Orchestration**: Kubernetes (k3s - lightweight distribution)
+- **Database**: PostgreSQL deployed via Kubernetes
 - **Container Registry**: Docker Hub
 - **CI/CD**: GitHub Actions (automated build & deploy)
 - **Infrastructure**: DigitalOcean VPS
@@ -94,7 +98,7 @@ Internet Traffic (HTTPS)
 
 - **Frontend and Backend** are deployed as separate **Kubernetes Deployments**
 - **Services**: NodePort type for external access, with Ingress for production routing
-- **Database**: JSON file storage (local persistence, can migrate to PostgreSQL)
+- **Database**: PostgreSQL 16 via Kubernetes with PersistentVolumeClaim
 - **Networking**: Traefik Ingress Controller with automatic HTTPS
 - **Autoscaling**: HPA monitors CPU metrics and scales backend 2→3 pods
 - **Health Checks**: Liveness and readiness probes for automatic recovery
@@ -146,7 +150,12 @@ k8s/
 ├─ frontend-deploy.yaml     # Frontend deployment (1 replica)
 ├─ frontend-svc.yaml        # Frontend service (NodePort: 30003)
 ├─ hpa-backend.yaml         # Horizontal Pod Autoscaler (2-3 replicas, 60% CPU)
-└─ ingress.yaml             # Traefik Ingress (SSL/TLS, path-based routing)
+├─ ingress.yaml             # Traefik Ingress (SSL/TLS, path-based routing)
+└─ postgres/                # PostgreSQL database
+   ├─ postgres-deployment.yaml  # PostgreSQL 16-alpine deployment
+   ├─ postgres-service.yaml     # Internal ClusterIP service
+   ├─ postgres-pvc.yaml         # Persistent Volume Claim
+   └─ postgres-secret.yaml      # Database credentials
 ```
 
 **Key Configuration Details:**
@@ -304,10 +313,13 @@ devops-uts/
 │   ├── requirements.txt        # Python dependencies
 │   └── app/
 │       ├── main.py            # FastAPI app initialization
+│       ├── dependencies.py    # Dependency injection
 │       ├── api/               # REST API routes
-│       ├── models/            # Pydantic data models
-│       ├── services/          # Business logic
-│       ├── db/                # Database layer & JSON storage
+│       ├── models/            # ORM & Pydantic models
+│       ├── interfaces/        # Repository interfaces
+│       ├── repositories/      # Data access (local/remote)
+│       ├── usecases/          # Business logic
+│       ├── datasources/       # Database sessions
 │       └── utils/             # Utility functions
 ├── frontend/                   # React + Vite Frontend
 │   ├── Containerfile          # Multi-stage Docker build
@@ -317,8 +329,8 @@ devops-uts/
 │   ├── index.html             # HTML entry point
 │   └── src/
 │       ├── main.tsx           # React app entry
-│       ├── components/        # React components
-│       ├── routes/            # Page routes
+│       ├── components/        # React components (16)
+│       ├── routes/            # Page routes (8)
 │       ├── models/            # TypeScript interfaces
 │       ├── contexts/          # React contexts
 │       └── utils/             # Utility functions
@@ -328,7 +340,12 @@ devops-uts/
 │   ├── frontend-deploy.yaml   # Frontend deployment
 │   ├── frontend-svc.yaml      # Frontend service
 │   ├── hpa-backend.yaml       # Horizontal Pod Autoscaler
-│   └── ingress.yaml           # Ingress configuration
+│   ├── ingress.yaml           # Ingress configuration
+│   └── postgres/              # PostgreSQL database
+│       ├── postgres-deployment.yaml
+│       ├── postgres-service.yaml
+│       ├── postgres-pvc.yaml
+│       └── postgres-secret.yaml
 └── legacy/
     └── podman-compose.yml     # Local development (alternative)
 ```
