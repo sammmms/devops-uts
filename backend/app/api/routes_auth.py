@@ -1,51 +1,26 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from app.models.user_model import UserCreate, UserLogin, UserModel, TokenResponse
-from app.db.user_database import UserDatabase
-from app.services.auth_service import (
-    hash_password,
-    verify_password,
-    create_access_token,
-    decode_access_token,
-)
+from app.models.pydantic.user_model import UserCreate, UserLogin, UserModel, TokenResponse
+from app.usecases.auth_usecase import AuthUseCase, decode_access_token
 from app.utils.response_util import create_json_response
+from app.dependencies import get_auth_usecase
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 security = HTTPBearer()
-user_db = UserDatabase()
-
 
 @router.post("/register")
-async def register(user_data: UserCreate):
+async def register(user_data: UserCreate, auth_usecase: AuthUseCase = Depends(get_auth_usecase)):
     """Register a new user"""
-    # Check if user already exists
-    existing_user = user_db.get_by_email(user_data.email)
-    if existing_user:
+    try:
+        user = auth_usecase.register_user(user_data)
+    except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+            detail=str(e)
         )
     
-    existing_username = user_db.get_by_username(user_data.username)
-    if existing_username:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already taken"
-        )
-    
-    # Create new user with hashed password
-    hashed_password = hash_password(user_data.password)
-    user_model = UserModel(
-        id=None,
-        email=user_data.email,
-        username=user_data.username,
-        password_hash=hashed_password
-    )
-    user = user_db.create(user=user_model, password_hash=hashed_password)
-    
-    # Generate token
-    access_token = create_access_token(data={"sub": str(user.id)})
+    access_token = auth_usecase.create_access_token(data={"sub": str(user.id)})
     
     token_response = TokenResponse(
         access_token=access_token,
@@ -61,34 +36,16 @@ async def register(user_data: UserCreate):
 
 
 @router.post("/login")
-async def login(credentials: UserLogin):
+async def login(credentials: UserLogin, auth_usecase: AuthUseCase = Depends(get_auth_usecase)):
     """Login with email or username and password"""
-    # Find user by email or username
-    user = None
-    password_hash = None
-    
-    if credentials.email:
-        user = user_db.get_by_email(credentials.email)
-        password_hash = user_db.get_password_hash(credentials.email)
-    elif credentials.username:
-        user = user_db.get_by_username(credentials.username)
-        if user:
-            # Get password hash by email since that's the only way available
-            password_hash = user_db.get_password_hash(user.email)
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email or username is required"
-        )
-    
-    if not user or not password_hash or not verify_password(credentials.password, password_hash):
+    user = auth_usecase.authenticate_user(credentials)
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
         )
     
-    # Generate token
-    access_token = create_access_token(data={"sub": str(user.id)})
+    access_token = auth_usecase.create_access_token(data={"sub": str(user.id)})
     
     token_response = TokenResponse(
         access_token=access_token,
@@ -102,37 +59,31 @@ async def login(credentials: UserLogin):
     )
 
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), auth_usecase: AuthUseCase = Depends(get_auth_usecase)):
     """Dependency to get current user from JWT token"""
     token = credentials.credentials
+    payload = decode_access_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid token")
+        
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
     
-    try:
-        payload = decode_access_token(token)
-        if not payload:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token"
-            )
-        user_id = payload.get("sub")
-        if not user_id:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token"
-            )
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
-        )
-    
-    user = user_db.get_by_id(int(user_id))
-    if not user:
-        raise HTTPException(
+    user_in_db = auth_usecase.repository.get(user_id)
+    if not user_in_db:
+         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found"
         )
-    
-    return user
+        
+    # user_in_db is UserInDB, convert to UserModel for route usage
+    return UserModel(
+            id=user_in_db.id,
+            email=user_in_db.email,
+            username=user_in_db.username,
+            full_name=user_in_db.full_name
+        )
 
 
 @router.get("/me")
@@ -145,9 +96,9 @@ async def get_me(current_user: UserModel = Depends(get_current_user)):
 
 
 @router.post("/refresh")
-async def refresh_token(current_user: UserModel = Depends(get_current_user)):
+async def refresh_token(current_user: UserModel = Depends(get_current_user), auth_usecase: AuthUseCase = Depends(get_auth_usecase)):
     """Refresh access token"""
-    access_token = create_access_token(data={"sub": str(current_user.id)})
+    access_token = auth_usecase.create_access_token(data={"sub": str(current_user.id)})
     
     token_response = TokenResponse(
         access_token=access_token,

@@ -137,24 +137,24 @@ export const SmartFAB = ({
               initial={{ opacity: 0, y: 20, scale: 0.8 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.8 }}
-              className="absolute bottom-20 flex flex-col gap-3 mb-2"
+              className="absolute bottom-20 flex flex-col gap-3 mb-2 items-stretch min-w-[180px]"
             >
               {actions.map((action) => (
                 <motion.button
                   key={action.id}
                   onClick={(e) => handleSelectAction(action.id, e)}
-                  whileHover={{ scale: 1.1 }}
+                  whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.95 }}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl shadow-lg backdrop-blur-md border ${
+                  className={`flex items-center justify-between w-full gap-4 px-5 py-3.5 rounded-2xl shadow-lg backdrop-blur-md border transition-all ${
                     activeActionId === action.id
                       ? "bg-blue-600 text-white border-blue-500"
-                      : "bg-white/90 dark:bg-slate-800/90 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700"
+                      : "bg-white/95 dark:bg-slate-800/95 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700"
                   }`}
                 >
-                  <span className="text-sm font-medium whitespace-nowrap">
+                  <span className="text-sm font-semibold whitespace-nowrap">
                     {action.label}
                   </span>
-                  <div className="p-1">{action.icon}</div>
+                  <div className="p-0.5">{action.icon}</div>
                 </motion.button>
               ))}
             </motion.div>

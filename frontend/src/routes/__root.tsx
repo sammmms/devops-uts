@@ -21,7 +21,7 @@ function RootComponent() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {!isAuthPage && <Header />}
+      <Header />
 
       <main
         className={

@@ -1,18 +1,14 @@
 from datetime import date, timedelta
 from fastapi import APIRouter, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.services.todo_services import TodoServices
-from app.db.todo_database import TodoDatabase
-from app.services.category_services import CategoryServices
-from app.db.category_database import CategoryDatabase
-from app.services.auth_service import decode_access_token
+from app.usecases.todo_usecase import TodoUseCase
+from app.usecases.category_usecase import CategoryUseCase
+from app.usecases.auth_usecase import AuthUseCase, decode_access_token
+
+from app.dependencies import get_todo_usecase, get_category_usecase
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 security = HTTPBearer()
-
-todo_service = TodoServices(db=TodoDatabase())
-category_service = CategoryServices(db=CategoryDatabase())
-
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
     """Get current user ID from JWT token"""
@@ -30,9 +26,13 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 
 
 @router.get("/stats", tags=["dashboard"])
-async def get_dashboard_stats(current_user: str = Depends(get_current_user)):
+async def get_dashboard_stats(
+    current_user: str = Depends(get_current_user),
+    todo_service: TodoUseCase = Depends(get_todo_usecase),
+    category_service: CategoryUseCase = Depends(get_category_usecase)
+):
     todos = todo_service.get_all(user_id=current_user)
-    categories = category_service.get_all(whereQuery={"user_id": current_user})
+    categories = category_service.get_all(user_id=current_user)
     
     today = date.today()
     next_week = today + timedelta(days=7)

@@ -1,19 +1,20 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.models.todo_model import TodoCreateModel, TodoModel, TodoResponseModel
-from app.services.todo_services import TodoServices
-from app.db.todo_database import TodoDatabase
-from app.db.user_database import UserDatabase
+from app.models.pydantic.todo_model import TodoCreateModel, TodoModel, TodoResponseModel
+from app.usecases.todo_usecase import TodoUseCase
+
 from app.utils.response_util import create_json_response
-from app.services.category_services import CategoryServices
-from app.db.category_database import CategoryDatabase
-from app.services.auth_service import decode_access_token
+from app.usecases.category_usecase import CategoryUseCase
+
+from app.usecases.auth_usecase import AuthUseCase, decode_access_token # decode_access_token needs check if it is exported from usecase
+
+from app.dependencies import get_todo_usecase, get_category_usecase
 
 router = APIRouter(prefix="/todo", tags=["todo"])
 security = HTTPBearer()
-todo_service = TodoServices(db=TodoDatabase())
-category_service = CategoryServices(db=CategoryDatabase())
-user_db = UserDatabase()
+# todo_service = TodoServices() # Removed
+# category_service = CategoryServices() # Removed
+# user_db = UserDatabase() # Use AuthServices or Repo if needed
 
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
@@ -32,7 +33,12 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 
 
 @router.post("")
-async def create_todo(todo: TodoCreateModel, current_user: str = Depends(get_current_user)):
+async def create_todo(
+    todo: TodoCreateModel, 
+    current_user: str = Depends(get_current_user),
+    todo_service: TodoUseCase = Depends(get_todo_usecase),
+    category_service: CategoryUseCase = Depends(get_category_usecase)
+):
     if todo.category_id is not None:
         category = category_service.get_by_id(todo.category_id)
         if not category or category.user_id != current_user:
@@ -52,6 +58,7 @@ async def get_todos(
     completed: bool | None = None,
     overdue: bool | None = None,
     current_user: str = Depends(get_current_user),
+    todo_service: TodoUseCase = Depends(get_todo_usecase),
 ):
     # Pass filters to service with user_id
     todos = todo_service.get_all(user_id=current_user, category_id=category_id, completed=completed, overdue=overdue)
@@ -59,7 +66,12 @@ async def get_todos(
 
 
 @router.get("/{todo_id}")
-async def get_todo(todo_id: int, current_user: str = Depends(get_current_user)):
+async def get_todo(
+    todo_id: int, 
+    current_user: str = Depends(get_current_user),
+    todo_service: TodoUseCase = Depends(get_todo_usecase),
+    category_service: CategoryUseCase = Depends(get_category_usecase)
+):
     todo = todo_service.get_by_id(todo_id)
     if not todo or todo.user_id != current_user:
         raise HTTPException(status_code=404, detail="Todo not found")
@@ -76,7 +88,12 @@ async def get_todo(todo_id: int, current_user: str = Depends(get_current_user)):
 
 
 @router.put("/{todo_id}")
-async def update_todo(todo_id: int, todo: TodoModel, current_user: str = Depends(get_current_user)):
+async def update_todo(
+    todo_id: int, 
+    todo: TodoModel, 
+    current_user: str = Depends(get_current_user),
+    todo_service: TodoUseCase = Depends(get_todo_usecase),
+):
     existing_todo = todo_service.get_by_id(todo_id)
     if not existing_todo or existing_todo.user_id != current_user:
         raise HTTPException(status_code=404, detail="Todo not found")
@@ -91,7 +108,11 @@ async def update_todo(todo_id: int, todo: TodoModel, current_user: str = Depends
 
 
 @router.delete("/{todo_id}")
-async def delete_todo(todo_id: int, current_user: str = Depends(get_current_user)):
+async def delete_todo(
+    todo_id: int, 
+    current_user: str = Depends(get_current_user),
+    todo_service: TodoUseCase = Depends(get_todo_usecase)
+):
     existing_todo = todo_service.get_by_id(todo_id)
     if not existing_todo or existing_todo.user_id != current_user:
         raise HTTPException(status_code=404, detail="Todo not found")

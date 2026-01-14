@@ -41,7 +41,7 @@ export const CategoriesList = ({
       </div>
 
       <motion.div layout className="space-y-3">
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence initial={false}>
           {/* All Option */}
           <motion.div
             key="all"
@@ -91,9 +91,15 @@ export const CategoriesList = ({
               <motion.div
                 key={category.id}
                 layout
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{
+                  opacity: 0,
+                  height: 0,
+                  marginBottom: 0,
+                  overflow: "hidden",
+                }}
+                transition={{ duration: 0.2 }}
                 onClick={() => onSelectCategory(category.id)}
                 className="cursor-pointer"
               >

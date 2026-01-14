@@ -6,3 +6,6 @@ python-jose[cryptography]
 passlib[bcrypt]
 argon2-cffi
 python-multipart
+sqlalchemy
+psycopg2-binary
+python-dotenv

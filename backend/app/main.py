@@ -50,6 +50,16 @@ def create_app() -> FastAPI:
         docs_url="/docs",
         redoc_url="/redoc",
     )
+    
+    @app.on_event("startup")
+    def startup_db():
+        # Initialize DB (only if not local)
+        import os
+        if os.getenv("REPOSITORY_MODE", "remote").lower() != "local":
+            from app.datasources.session import engine, Base
+            import app.models.orm  # Register models
+            Base.metadata.create_all(bind=engine)
+
 
     app.add_exception_handler(HTTPException, http_exception_handler)
 

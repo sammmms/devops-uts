@@ -48,7 +48,7 @@ if (rootElement && !rootElement.innerHTML) {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <RouterProvider router={router} />
-            <Toaster position="bottom-center" />
+            <Toaster position="bottom-center" richColors closeButton />
           </AuthProvider>
         </QueryClientProvider>
       </ThemeProvider>

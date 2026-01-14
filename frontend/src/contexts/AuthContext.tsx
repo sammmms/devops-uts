@@ -57,8 +57,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setToken(access_token);
       setUser(userData);
     } catch (error: any) {
-      const message =
-        error.response?.data?.detail || error.message || "Login failed";
+      console.error("Login Error Object:", error);
+
+      let message = "Login failed";
+
+      if (error.response) {
+        const data = error.response.data;
+
+        if (data?.detail) {
+          const detail = data.detail;
+          if (Array.isArray(detail)) {
+            message = detail
+              .map((err: any) => err.msg || JSON.stringify(err))
+              .join("\n");
+          } else if (typeof detail === "object") {
+            message = JSON.stringify(detail);
+          } else {
+            message = String(detail);
+          }
+        } else if (data?.message) {
+          message = data.message;
+        } else if (typeof data === "string") {
+          message = data;
+        } else if (error.message) {
+          message = error.message;
+        }
+      } else if (error.message) {
+        message = error.message;
+      }
+
       throw new Error(message);
     }
   };
@@ -82,8 +109,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setToken(access_token);
       setUser(userData);
     } catch (error: any) {
-      const message =
-        error.response?.data?.detail || error.message || "Registration failed";
+      let message = "Registration failed";
+
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (Array.isArray(detail)) {
+          // Handle Pydantic validation errors
+          message = detail
+            .map((err: any) => err.msg || JSON.stringify(err))
+            .join("\n");
+        } else if (typeof detail === "object") {
+          message = JSON.stringify(detail);
+        } else {
+          message = String(detail);
+        }
+      } else if (error.message) {
+        message = error.message;
+      }
+
       throw new Error(message);
     }
   };

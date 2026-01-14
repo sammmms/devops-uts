@@ -296,19 +296,19 @@ function TodosPage() {
             {
               id: "add_task",
               label: "Add Task",
-              icon: <Plus className="w-8 h-8" />,
+              icon: <Plus className="w-6 h-6" />,
               onClick: handleOpenAddTodoDialog,
             },
             {
               id: "filter",
               label: "Filter Tasks",
-              icon: <Filter className="w-7 h-7" />,
+              icon: <Filter className="w-5 h-5" />,
               onClick: () => setIsFilterDialogOpen(true),
             },
             {
               id: "add_category",
               label: "Add Category",
-              icon: <Plus className="w-7 h-7" />,
+              icon: <Plus className="w-5 h-5" />,
               onClick: handleOpenAddDialog,
             },
           ]}
@@ -471,15 +471,15 @@ function TodosSection({
           </div>
           <div className="flex items-center gap-3">
             {/* Desktop Controls */}
-            <div className="hidden sm:flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-4">
               <div className="flex items-center gap-2">
                 {/* Filter Badge Removed */}
-                <div className="w-[130px]">
+                <div className="w-[140px]">
                   <Select
                     value={filter || "all"}
                     onValueChange={handleFilterChange}
                   >
-                    <SelectTrigger className="h-10 text-sm bg-white/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700">
+                    <SelectTrigger className="h-11 text-sm bg-white/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700">
                       <SelectValue placeholder="Filter" />
                     </SelectTrigger>
                     <SelectContent>
@@ -493,7 +493,7 @@ function TodosSection({
               </div>
               <button
                 onClick={handleOpenAddTodoDialog}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-base rounded-xl hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-500/20"
+                className="flex items-center gap-2 px-5 h-11 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-500/20"
               >
                 <Plus size={18} />
                 <span>Add Task</span>

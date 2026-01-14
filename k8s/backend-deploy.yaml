@@ -20,6 +20,32 @@ spec:
         ports:
         - containerPort: 5000
         imagePullPolicy: Always
+        env:
+          - name: DB_HOST
+            value: "postgres"
+          - name: DB_PORT
+            value: "5432"
+          - name: DB_NAME
+            valueFrom:
+              secretKeyRef:
+                name: postgres-secret
+                key: POSTGRES_DB
+          - name: DB_USER
+            valueFrom:
+              secretKeyRef:
+                name: postgres-secret
+                key: POSTGRES_USER
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: postgres-secret
+                key: POSTGRES_PASSWORD
+          - name: SECRET_KEY
+            value: "supersecretkey" # In real prod, use secretKeyRef
+          - name: ALGORITHM
+            value: "HS256"
+          - name: ACCESS_TOKEN_EXPIRE_MINUTES
+            value: "30"
         resources:
           requests:
             cpu: "100m"

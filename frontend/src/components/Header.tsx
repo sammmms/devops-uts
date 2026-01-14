@@ -7,6 +7,7 @@ import {
   Sun,
   LogOut,
   AlertTriangle,
+  LogIn,
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -52,46 +53,75 @@ export default function Header() {
                 className="w-full h-full object-cover"
               />
             </motion.div>
-            <span className="hidden sm:block text-xl font-bold bg-clip-text text-transparent bg-linear-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 tracking-tight">
+            <span className="hidden sm:block text-xl font-bold text-gray-900 dark:text-white tracking-tight">
               Todo
             </span>
           </Link>
 
           <nav className="relative flex items-center gap-1 bg-gray-100/50 dark:bg-gray-800/50 p-1.5 rounded-full border border-gray-200/50 dark:border-gray-700/50">
-            {[
-              {
-                to: "/",
-                label: "Dashboard",
-                icon: (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <rect width="7" height="9" x="3" y="3" rx="1" />
-                    <rect width="7" height="5" x="14" y="3" rx="1" />
-                    <rect width="7" height="9" x="14" y="12" rx="1" />
-                    <rect width="7" height="5" x="3" y="16" rx="1" />
-                  </svg>
-                ),
-              },
-              {
-                to: "/todos",
-                label: "Todo",
-                icon: <CheckSquare className="w-4 h-4" />,
-              },
-              {
-                to: "/about",
-                label: "About",
-                icon: <Info className="w-4 h-4" />,
-              },
-            ].map((link) => (
+            {(isAuthenticated
+              ? [
+                  {
+                    to: "/dashboard",
+                    label: "Dashboard",
+                    icon: (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect width="7" height="9" x="3" y="3" rx="1" />
+                        <rect width="7" height="5" x="14" y="3" rx="1" />
+                        <rect width="7" height="9" x="14" y="12" rx="1" />
+                        <rect width="7" height="5" x="3" y="16" rx="1" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    to: "/todos",
+                    label: "Todo",
+                    icon: <CheckSquare className="w-4 h-4" />,
+                  },
+                  {
+                    to: "/about",
+                    label: "About",
+                    icon: <Info className="w-4 h-4" />,
+                  },
+                ]
+              : [
+                  {
+                    to: "/",
+                    label: "Home",
+                    icon: (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                        <polyline points="9 22 9 12 15 12 15 22" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    to: "/about",
+                    label: "About",
+                    icon: <Info className="w-4 h-4" />,
+                  },
+                ]
+            ).map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
@@ -100,7 +130,7 @@ export default function Header() {
                   className: "!text-blue-600 dark:!text-blue-400",
                 }}
               >
-                {({ isActive }: { isActive: boolean }) => (
+                {({ isActive }) => (
                   <>
                     {isActive && (
                       <motion.div
@@ -143,7 +173,7 @@ export default function Header() {
                 <Sun className="w-5 h-5" />
               )}
             </button>
-            {isAuthenticated && (
+            {isAuthenticated ? (
               <Dialog.Root open={isLogoutOpen} onOpenChange={setIsLogoutOpen}>
                 <Dialog.Trigger asChild>
                   <button
@@ -211,6 +241,14 @@ export default function Header() {
                   </Dialog.Content>
                 </Dialog.Portal>
               </Dialog.Root>
+            ) : (
+              <button
+                onClick={() => navigate({ to: "/login" })}
+                className="p-2.5 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+                aria-label="Login"
+              >
+                <LogIn className="w-5 h-5" />
+              </button>
             )}
           </div>
         </div>
