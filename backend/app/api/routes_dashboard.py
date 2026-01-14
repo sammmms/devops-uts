@@ -1,5 +1,5 @@
 from datetime import date, timedelta
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.usecases.todo_usecase import TodoUseCase
 from app.usecases.category_usecase import CategoryUseCase
@@ -16,13 +16,25 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     try:
         payload = decode_access_token(token)
         if not payload:
-            raise Exception("Invalid token")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         user_id = payload.get("sub")
         if not user_id:
-            raise Exception("Invalid token")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         return user_id
     except Exception:
-        raise Exception("Invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
 @router.get("/stats", tags=["dashboard"])
