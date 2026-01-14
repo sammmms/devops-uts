@@ -10,7 +10,7 @@ import { ProtectedRoute } from "@/components";
 import type { CategoryModel } from "@/models/CategoryModel";
 import type { TodoModel } from "@/models/TodoModel";
 import axiosInstance from "@/utils/axios_instance";
-import { Plus } from "lucide-react";
+import { FolderPlus, Plus } from "lucide-react";
 import {
   TodosList,
   CategoriesList,
@@ -239,7 +239,7 @@ function TodosPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen">
+      <div className="min-h-screen relative overflow-x-hidden">
         <div className="max-w-7xl mx-auto px-4 pb-4 pt-0 sm:p-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Categories Section */}
@@ -297,18 +297,24 @@ function TodosPage() {
               id: "add_task",
               label: "Add Task",
               icon: <Plus className="w-6 h-6" />,
+              buttonColor:
+                "bg-emerald-600 bg-linear-to-br from-emerald-500 to-emerald-700 hover:bg-emerald-700 border-emerald-500",
               onClick: handleOpenAddTodoDialog,
             },
             {
               id: "filter",
               label: "Filter Tasks",
               icon: <Filter className="w-5 h-5" />,
+              buttonColor:
+                "bg-violet-600 bg-linear-to-br from-violet-500 to-violet-700 hover:bg-violet-700 border-violet-500",
               onClick: () => setIsFilterDialogOpen(true),
             },
             {
               id: "add_category",
               label: "Add Category",
-              icon: <Plus className="w-5 h-5" />,
+              icon: <FolderPlus className="w-5 h-5" />,
+              buttonColor:
+                "bg-blue-600 bg-linear-to-br from-blue-500 to-blue-700 hover:bg-blue-700 border-blue-500",
               onClick: handleOpenAddDialog,
             },
           ]}

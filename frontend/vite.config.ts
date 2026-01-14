@@ -30,5 +30,22 @@ export default defineConfig({
       include: [/node_modules/],
       transformMixedEsModules: true,
     },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom", "axios"],
+          ui: [
+            "@radix-ui/react-checkbox",
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-label",
+            "@radix-ui/react-select",
+            "lucide-react",
+            "motion/react",
+            "sonner",
+          ],
+          tanstack: ["@tanstack/react-query", "@tanstack/react-router"],
+        },
+      },
+    },
   },
 });

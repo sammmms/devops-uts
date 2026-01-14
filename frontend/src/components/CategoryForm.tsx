@@ -1,7 +1,8 @@
 import type { CategoryModel } from "@/models/CategoryModel";
 import { Plus, Save } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Input } from "@/components/ui";
+import { AnimatePresence, motion } from "motion/react";
 
 interface CategoryFormProps {
   selectedCategory?: CategoryModel;
@@ -40,14 +41,44 @@ const CategoryForm = ({
   };
 
   return (
-    <div className="glass-card rounded-3xl p-6 border border-gray-100 dark:border-gray-800 shadow-xl">
+    <div className="glass-card rounded-3xl p-6 border border-gray-100 dark:border-gray-800 shadow-xl transition-all duration-300">
       <div className="flex items-center gap-3 mb-6">
         <div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
-          <Plus className="w-5 h-5" />
+          <AnimatePresence mode="wait">
+            {selectedCategory ? (
+              <motion.div
+                key="edit-icon"
+                initial={{ rotate: -90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: 90, opacity: 0 }}
+              >
+                <Save className="w-5 h-5" />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="add-icon"
+                initial={{ rotate: -90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: 90, opacity: 0 }}
+              >
+                <Plus className="w-5 h-5" />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
         <div>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-            {selectedCategory ? "Edit Category" : "Add New Category"}
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 min-h-7 flex items-center">
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={selectedCategory ? "edit-title" : "add-title"}
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -20, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                {selectedCategory ? "Edit Category" : "Add New Category"}
+              </motion.span>
+            </AnimatePresence>
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400">
             {selectedCategory

@@ -6,6 +6,7 @@ export interface SmartFABAction {
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
+  buttonColor?: string; // Optional custom color for the main button when active
 }
 
 interface SmartFABProps {
@@ -32,19 +33,23 @@ export const SmartFAB = ({
   /* Idle timer for hint */
   const [showHint, setShowHint] = useState(false);
   const IDLE_TIMEOUT = 60000; // 1 minute
-  // ACTUALLY user said "after like some minutes". I will set it to 1 minute (60000ms) to be less annoying.
-  // Wait, let's use 60s.
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const resetTimer = React.useCallback(() => {
+    setShowHint(false);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      setShowHint(true);
+    }, IDLE_TIMEOUT);
+  }, []);
 
   useEffect(() => {
-    let timeout: NodeJS.Timeout;
-
-    const resetTimer = () => {
-      setShowHint(false);
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        setShowHint(true);
-      }, IDLE_TIMEOUT);
-    };
+    // Initial pulse to draw attention
+    const initialPulseTimer = setTimeout(() => {
+      setShowHint(true);
+      // Auto hide hint after 3 seconds if no interaction
+      setTimeout(() => setShowHint(false), 3000);
+    }, 1000);
 
     // Events to reset timer
     window.addEventListener("scroll", resetTimer);
@@ -55,12 +60,13 @@ export const SmartFAB = ({
     resetTimer();
 
     return () => {
-      clearTimeout(timeout);
+      clearTimeout(initialPulseTimer);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       window.removeEventListener("scroll", resetTimer);
       window.removeEventListener("click", resetTimer);
       window.removeEventListener("touchstart", resetTimer);
     };
-  }, []);
+  }, [resetTimer]);
 
   const handlePressStart = () => {
     setShowHint(false); // Hide hint immediately on interaction
@@ -147,7 +153,9 @@ export const SmartFAB = ({
                   whileTap={{ scale: 0.95 }}
                   className={`flex items-center justify-between w-full gap-4 px-5 py-3.5 rounded-2xl shadow-lg backdrop-blur-md border transition-all ${
                     activeActionId === action.id
-                      ? "bg-blue-600 text-white border-blue-500"
+                      ? `${
+                          action.buttonColor || "bg-blue-600 border-blue-500"
+                        } text-white`
                       : "bg-white/95 dark:bg-slate-800/95 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700"
                   }`}
                 >
@@ -161,7 +169,30 @@ export const SmartFAB = ({
           )}
         </AnimatePresence>
 
+        {/* Pulse Ring */}
+        <AnimatePresence>
+          {showHint && (
+            <motion.div
+              initial={{ opacity: 0.5, scale: 1 }}
+              animate={{
+                opacity: 0,
+                scale: 1.6,
+              }}
+              exit={{ opacity: 0 }}
+              transition={{
+                duration: 2.5,
+                ease: "easeOut",
+              }}
+              className={`absolute inset-0 rounded-full z-40 ${
+                activeAction.buttonColor ||
+                "bg-blue-600 bg-linear-to-br from-blue-500 to-blue-700"
+              }`}
+            />
+          )}
+        </AnimatePresence>
+
         <motion.button
+          onMouseEnter={resetTimer} // Stop pulse on hover
           onMouseDown={handlePressStart}
           onMouseUp={handlePressEnd}
           onTouchStart={handlePressStart}
@@ -169,24 +200,10 @@ export const SmartFAB = ({
           onClick={handleClick}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          // Pulsing animation when showing hint
-          animate={
-            showHint
-              ? {
-                  boxShadow: [
-                    "0 0 0 0 rgba(37, 99, 235, 0)",
-                    "0 0 0 10px rgba(37, 99, 235, 0.3)", // Blue pulse
-                    "0 0 0 20px rgba(37, 99, 235, 0)",
-                  ],
-                  transition: {
-                    duration: 2,
-                    repeat: Infinity,
-                    repeatType: "loop",
-                  },
-                }
-              : {}
-          }
-          className="relative flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 text-white shadow-xl shadow-blue-500/30 border-4 border-white dark:border-slate-900 bg-linear-to-br from-blue-500 to-blue-700 z-50"
+          className={`relative flex items-center justify-center w-16 h-16 rounded-full text-white shadow-xl shadow-blue-500/30 border-4 border-white dark:border-slate-900 z-50 ${
+            activeAction.buttonColor ||
+            "bg-blue-600 bg-linear-to-br from-blue-500 to-blue-700"
+          }`}
         >
           <motion.div
             key={activeAction.id}
