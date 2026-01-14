@@ -18,12 +18,12 @@ export default defineConfig({
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
-    conditions: ["browser", "module", "default"],
+    // conditions: ["browser", "module", "default"],
   },
 
-  optimizeDeps: {
-    include: ["axios", "@radix-ui/number", "@radix-ui/react-select"],
-  },
+  // optimizeDeps: {
+  //   include: ["axios", "@radix-ui/number", "@radix-ui/react-select"],
+  // },
 
   build: {
     commonjsOptions: {
