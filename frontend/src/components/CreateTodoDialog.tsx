@@ -59,17 +59,21 @@ export const CreateTodoDialog = ({
 
                 <Form
                   handleSubmit={(todo) => {
-                    const todoWithCategory = {
-                      ...todo,
-                      category_id:
-                        selectedCategoryId && selectedCategoryId !== -1
-                          ? selectedCategoryId
-                          : undefined,
-                    };
+                    // Only set category from selectedCategoryId when creating a new todo
+                    // When editing, keep the todo's existing category_id (which can be changed in the form)
+                    const todoWithCategory = selectedTodo
+                      ? todo // Editing: use whatever category was selected in the form
+                      : {
+                          ...todo,
+                          category_id:
+                            selectedCategoryId && selectedCategoryId !== -1
+                              ? selectedCategoryId
+                              : todo.category_id,
+                        };
                     return onSubmit(todoWithCategory);
                   }}
                   selectedTodo={selectedTodo}
-                  hideCategory={true}
+                  hideCategory={!selectedTodo} // Show category dropdown when editing
                 />
               </motion.div>
             </Dialog.Content>

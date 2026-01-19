@@ -164,11 +164,8 @@ const Form = ({
             })
           }
         >
-          <Select.Trigger className="inline-flex items-center justify-between gap-2 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 dark:border-gray-600">
-            <div className="flex items-center gap-2">
-              <Flag className="w-4 h-4" />
-              <Select.Value placeholder="Select Priority" />
-            </div>
+          <Select.Trigger className={`inline-flex items-center justify-between gap-2 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 dark:border-gray-600 ${priorityOptions.find(p => p.value === (todo.priority || "medium"))?.color || ""}`}>
+            <Select.Value placeholder="Select Priority" />
             <Select.Icon>
               <ChevronDownIcon />
             </Select.Icon>
@@ -202,42 +199,42 @@ const Form = ({
         <div className="flex flex-col gap-2">
           <Label className="text-sm font-medium text-gray-700">Category</Label>
           <Select.Root
-            value={todo.category_id ? String(todo.category_id) : ""}
+            value={todo.category_id ? String(todo.category_id) : "none"}
             onValueChange={(val) =>
               setTodo({
                 ...todo,
-                category_id: val ? Number(val) : undefined,
+                category_id: val && val !== "none" ? Number(val) : undefined,
               })
             }
           >
-            <Select.Trigger className="inline-flex items-center justify-between gap-2 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <Select.Trigger className="inline-flex items-center justify-between gap-2 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 dark:border-gray-600">
               <Select.Value placeholder="Select Category (Optional)" />
               <Select.Icon>
                 <ChevronDownIcon />
               </Select.Icon>
             </Select.Trigger>
             <Select.Portal>
-              <Select.Content className="z-50 rounded-md border border-gray-200 bg-white shadow-md">
+              <Select.Content className="z-50 rounded-md border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-600 shadow-md">
                 <Select.Viewport className="p-1">
                   <Select.Item
-                    value=""
-                    className="relative flex cursor-pointer select-none items-center rounded-sm px-3 py-2 text-sm outline-none focus:bg-gray-100"
+                    value="none"
+                    className="relative flex cursor-pointer select-none items-center rounded-sm pl-8 pr-3 py-2 text-sm outline-none focus:bg-gray-100 dark:focus:bg-gray-700"
                   >
-                    <Select.ItemText>None</Select.ItemText>
-                    <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
+                    <Select.ItemIndicator className="absolute left-2 inline-flex items-center">
                       <CheckIcon />
                     </Select.ItemIndicator>
+                    <Select.ItemText>None</Select.ItemText>
                   </Select.Item>
                   {categories.map((category) => (
                     <Select.Item
                       key={category.id}
                       value={String(category.id)}
-                      className="relative flex cursor-pointer select-none items-center rounded-sm px-3 py-2 text-sm outline-none focus:bg-gray-100"
+                      className="relative flex cursor-pointer select-none items-center rounded-sm pl-8 pr-3 py-2 text-sm outline-none focus:bg-gray-100 dark:focus:bg-gray-700"
                     >
-                      <Select.ItemText>{category.name}</Select.ItemText>
-                      <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
+                      <Select.ItemIndicator className="absolute left-2 inline-flex items-center">
                         <CheckIcon />
                       </Select.ItemIndicator>
+                      <Select.ItemText>{category.name}</Select.ItemText>
                     </Select.Item>
                   ))}
                 </Select.Viewport>
