@@ -15,6 +15,7 @@ class TodoRepository(ITodoRepository):
         category_id: int | None = None,
         completed: bool | None = None,
         overdue: bool | None = None,
+        priority: str | None = None,
     ) -> List[TodoModel]:
         db = self.data_source.get_session()
         try:
@@ -30,6 +31,8 @@ class TodoRepository(ITodoRepository):
                     Todo.deadline < datetime.date.today(),
                     Todo.completed == False
                 )
+            if priority is not None:
+                query = query.filter(Todo.priority == priority)
 
             todos = query.all()
             return [

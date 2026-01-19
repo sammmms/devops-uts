@@ -42,7 +42,7 @@ const categoriesQuery = queryOptions({
 
 const todosQuery = (
   categoryId?: number | null,
-  filters?: { completed?: boolean; overdue?: boolean }
+  filters?: { completed?: boolean; overdue?: boolean; priority?: string }
 ) =>
   queryOptions({
     queryKey: ["todos", categoryId, filters],
@@ -54,6 +54,7 @@ const todosQuery = (
       if (filters?.completed !== undefined)
         params.completed = filters.completed;
       if (filters?.overdue !== undefined) params.overdue = filters.overdue;
+      if (filters?.priority !== undefined) params.priority = filters.priority;
 
       const res = await axiosInstance.get("/todo", { params });
       return res.data.todos;
@@ -65,17 +66,18 @@ export const Route = createFileRoute("/todos")({
   component: TodosPage,
   validateSearch: (
     search: Record<string, unknown>
-  ): { filter?: string; categoryId?: number } => {
+  ): { filter?: string; categoryId?: number; priority?: string } => {
     return {
       filter: (search.filter as string) || undefined,
       categoryId: search.categoryId ? Number(search.categoryId) : undefined,
+      priority: (search.priority as string) || undefined,
     };
   },
 });
 
 function TodosPage() {
   const navigate = Route.useNavigate();
-  const { filter, categoryId: selectedCategoryIdParam } = Route.useSearch();
+  const { filter, categoryId: selectedCategoryIdParam, priority: priorityFilter } = Route.useSearch();
   const queryClient = useQueryClient();
 
   // Category Dialog State
@@ -100,6 +102,7 @@ function TodosPage() {
     completed:
       filter === "completed" ? true : filter === "pending" ? false : undefined,
     overdue: filter === "overdue" ? true : undefined,
+    priority: priorityFilter,
   };
 
   // Handlers
@@ -354,36 +357,63 @@ function TodosPage() {
                     </div>
 
                     <div className="grid gap-4">
-                      <div className="grid gap-2">
-                        {["all", "completed", "pending", "overdue"].map((f) => (
-                          <Button
-                            key={f}
-                            variant={
-                              filters.completed ===
-                                (f === "completed"
-                                  ? true
-                                  : f === "pending"
-                                    ? false
-                                    : undefined) &&
-                              filters.overdue ===
-                                (f === "overdue" ? true : undefined)
-                                ? "default"
-                                : "outline"
-                            }
-                            className="justify-start capitalize h-12 text-base"
-                            onClick={() => {
-                              navigate({
-                                search: (prev) => ({
-                                  ...prev,
-                                  filter: f === "all" ? undefined : f,
-                                }),
-                              });
-                              setIsFilterDialogOpen(false);
-                            }}
-                          >
-                            {f === "all" ? "All Tasks" : f}
-                          </Button>
-                        ))}
+                      {/* Status Filter */}
+                      <div>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Status</p>
+                        <div className="grid gap-2">
+                          {["all", "completed", "pending", "overdue"].map((f) => (
+                            <Button
+                              key={f}
+                              variant={
+                                filters.completed ===
+                                  (f === "completed"
+                                    ? true
+                                    : f === "pending"
+                                      ? false
+                                      : undefined) &&
+                                filters.overdue ===
+                                  (f === "overdue" ? true : undefined)
+                                  ? "default"
+                                  : "outline"
+                              }
+                              className="justify-start capitalize h-12 text-base"
+                              onClick={() => {
+                                navigate({
+                                  search: (prev) => ({
+                                    ...prev,
+                                    filter: f === "all" ? undefined : f,
+                                  }),
+                                });
+                              }}
+                            >
+                              {f === "all" ? "All Status" : f}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                      {/* Priority Filter */}
+                      <div>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Priority</p>
+                        <div className="grid gap-2">
+                          {["all", "low", "medium", "high", "urgent"].map((p) => (
+                            <Button
+                              key={p}
+                              variant={filters.priority === (p === "all" ? undefined : p) ? "default" : "outline"}
+                              className="justify-start capitalize h-12 text-base"
+                              onClick={() => {
+                                navigate({
+                                  search: (prev) => ({
+                                    ...prev,
+                                    priority: p === "all" ? undefined : p,
+                                  }),
+                                });
+                                setIsFilterDialogOpen(false);
+                              }}
+                            >
+                              {p === "all" ? "All Priority" : p}
+                            </Button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </motion.div>
@@ -430,7 +460,7 @@ function TodosSection({
   handleToggleComplete,
 }: any) {
   const navigate = Route.useNavigate();
-  const { filter } = Route.useSearch();
+  const { filter, priority } = Route.useSearch();
   const { data: categories } = useSuspenseQuery(categoriesQuery);
   const { data: todos } = useSuspenseQuery(
     todosQuery(selectedCategoryId, filters)
@@ -441,6 +471,15 @@ function TodosSection({
       search: (prev) => ({
         ...prev,
         filter: value === "all" ? undefined : value,
+      }),
+    });
+  };
+
+  const handlePriorityFilterChange = (value: string) => {
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        priority: value === "all" ? undefined : value,
       }),
     });
   };
@@ -479,20 +518,38 @@ function TodosSection({
             {/* Desktop Controls */}
             <div className="hidden sm:flex items-center gap-4">
               <div className="flex items-center gap-2">
-                {/* Filter Badge Removed */}
+                {/* Status Filter */}
                 <div className="w-[140px]">
                   <Select
                     value={filter || "all"}
                     onValueChange={handleFilterChange}
                   >
                     <SelectTrigger className="h-11 text-sm bg-white/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700">
-                      <SelectValue placeholder="Filter" />
+                      <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Tasks</SelectItem>
+                      <SelectItem value="all">All Status</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>
                       <SelectItem value="pending">Pending</SelectItem>
                       <SelectItem value="overdue">Overdue</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* Priority Filter */}
+                <div className="w-[130px]">
+                  <Select
+                    value={priority || "all"}
+                    onValueChange={handlePriorityFilterChange}
+                  >
+                    <SelectTrigger className="h-11 text-sm bg-white/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700">
+                      <SelectValue placeholder="Priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Priority</SelectItem>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="urgent">Urgent</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

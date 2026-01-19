@@ -14,6 +14,7 @@ class TodoRepository(ITodoRepository):
         category_id: int | None = None,
         completed: bool | None = None,
         overdue: bool | None = None,
+        priority: str | None = None,
     ) -> List[TodoModel]:
         todos = self.data_source.todos.values()
         
@@ -26,6 +27,8 @@ class TodoRepository(ITodoRepository):
         if overdue:
             today = datetime.date.today()
             todos = [t for t in todos if t.deadline and t.deadline < today and not t.completed]
+        if priority is not None:
+            todos = [t for t in todos if t.priority == priority]
             
         return list(todos)
 

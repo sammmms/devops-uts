@@ -16,8 +16,9 @@ class TodoUseCase:
         category_id: int | None = None,
         completed: bool | None = None,
         overdue: bool | None = None,
+        priority: str | None = None,
     ) -> list[TodoModel]:
-        return self.repository.get_all(user_id, category_id, completed, overdue)
+        return self.repository.get_all(user_id, category_id, completed, overdue, priority)
 
     def get_by_id(self, todo_id: int) -> TodoModel | None:
         return self.repository.get(todo_id)

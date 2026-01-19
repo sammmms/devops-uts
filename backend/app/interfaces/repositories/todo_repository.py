@@ -10,6 +10,7 @@ class ITodoRepository(ABC):
         category_id: int | None = None,
         completed: bool | None = None,
         overdue: bool | None = None,
+        priority: str | None = None,
     ) -> List[TodoModel]:
         pass
 
