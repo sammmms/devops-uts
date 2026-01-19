@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
 from datetime import date
 from typing import Literal
 from app.models.pydantic.category_model import CategoryModel

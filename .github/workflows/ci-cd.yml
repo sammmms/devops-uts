@@ -59,7 +59,11 @@ jobs:
             set -e
 
             echo "📦 Applying Kubernetes manifests..."
+            sudo k3s kubectl delete job migration-job --ignore-not-found
             sudo k3s kubectl apply -f ~/k8s --wait=false
+
+            echo "⏳ Waiting for migration to complete..."
+            sudo k3s kubectl wait --for=condition=complete job/migration-job --timeout=300s
 
             echo "♻️ Restarting deployments..."
             sudo k3s kubectl rollout restart deployment backend frontend
