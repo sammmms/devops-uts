@@ -48,6 +48,13 @@ async def get_dashboard_stats(
         else:
             category_distribution["Uncategorized"] = category_distribution.get("Uncategorized", 0) + 1
 
+    # Priority distribution
+    priority_distribution = {"low": 0, "medium": 0, "high": 0, "urgent": 0}
+    for t in todos:
+        priority = getattr(t, 'priority', 'medium') or 'medium'
+        if priority in priority_distribution:
+            priority_distribution[priority] += 1
+
     return {
         "status": "success",
         "data": {
@@ -59,6 +66,10 @@ async def get_dashboard_stats(
             "upcoming_todos": upcoming_todos,
             "category_distribution": [
                 {"name": k, "value": v} for k, v in category_distribution.items()
+            ],
+            "priority_distribution": [
+                {"name": k, "value": v, "color": {"low": "#9ca3af", "medium": "#3b82f6", "high": "#f97316", "urgent": "#ef4444"}[k]} 
+                for k, v in priority_distribution.items()
             ]
         }
     }

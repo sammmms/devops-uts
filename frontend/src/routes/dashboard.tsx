@@ -106,6 +106,19 @@ function DashboardPage() {
   }>;
   const maxCount = Math.max(...(categoryData.map((d) => d.value) || [1]), 1);
 
+  const priorityData = (stats?.priority_distribution || []) as Array<{
+    name: string;
+    value: number;
+    color: string;
+  }>;
+  const priorityMaxCount = Math.max(...(priorityData.map((d) => d.value) || [1]), 1);
+  const priorityLabels: Record<string, string> = {
+    low: "Low",
+    medium: "Medium", 
+    high: "High",
+    urgent: "Urgent"
+  };
+
   return (
     <ProtectedRoute>
       <div className="max-w-7xl mx-auto p-6">
@@ -158,43 +171,85 @@ function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Chart Section */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4 }}
-            className="lg:col-span-2 glass-card p-6 rounded-3xl border border-white/40 dark:border-white/10 shadow-xl bg-white/60 dark:bg-gray-800/60"
-          >
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
-              Category Distribution
-            </h3>
-            <div className="space-y-4">
-              {categoryData.length > 0 ? (
-                categoryData.map((item: any, index: number) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700 dark:text-gray-300">
-                        {item.name}
-                      </span>
-                      <span className="text-gray-500">{item.value} tasks</span>
+          {/* Charts Section */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Category Distribution */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+              className="glass-card p-6 rounded-3xl border border-white/40 dark:border-white/10 shadow-xl bg-white/60 dark:bg-gray-800/60"
+            >
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
+                Category Distribution
+              </h3>
+              <div className="space-y-4">
+                {categoryData.length > 0 ? (
+                  categoryData.map((item: any, index: number) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium text-gray-700 dark:text-gray-300">
+                          {item.name}
+                        </span>
+                        <span className="text-gray-500">{item.value} tasks</span>
+                      </div>
+                      <div className="h-3 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${(item.value / maxCount) * 100}%` }}
+                          transition={{ duration: 1, delay: 0.5 + index * 0.1 }}
+                          className="h-full bg-blue-500 rounded-full"
+                        />
+                      </div>
                     </div>
-                    <div className="h-3 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${(item.value / maxCount) * 100}%` }}
-                        transition={{ duration: 1, delay: 0.5 + index * 0.1 }}
-                        className="h-full bg-blue-500 rounded-full"
-                      />
-                    </div>
+                  ))
+                ) : (
+                  <div className="text-center text-gray-500 py-10">
+                    No category data available
                   </div>
-                ))
-              ) : (
-                <div className="text-center text-gray-500 py-10">
-                  No category data available
-                </div>
-              )}
-            </div>
-          </motion.div>
+                )}
+              </div>
+            </motion.div>
+
+            {/* Priority Distribution */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5 }}
+              className="glass-card p-6 rounded-3xl border border-white/40 dark:border-white/10 shadow-xl bg-white/60 dark:bg-gray-800/60"
+            >
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
+                Priority Distribution
+              </h3>
+              <div className="space-y-4">
+                {priorityData.some(item => item.value > 0) ? (
+                  priorityData.map((item, index: number) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium text-gray-700 dark:text-gray-300">
+                          {priorityLabels[item.name] || item.name}
+                        </span>
+                        <span className="text-gray-500">{item.value} tasks</span>
+                      </div>
+                      <div className="h-3 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${(item.value / priorityMaxCount) * 100}%` }}
+                          transition={{ duration: 1, delay: 0.6 + index * 0.1 }}
+                          className="h-full rounded-full"
+                          style={{ backgroundColor: item.color }}
+                        />
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center text-gray-500 py-10">
+                    No priority data available
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
 
           {/* Task Lists Section */}
           <div className="space-y-6">
