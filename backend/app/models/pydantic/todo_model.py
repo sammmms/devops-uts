@@ -23,5 +23,6 @@ class TodoCreateModel(BaseModel):
     name: str
     deadline: date | None = None
     description: str | None = None
+    completed: bool = False
     priority: PriorityType = "medium"
     category_id: int | None = None
