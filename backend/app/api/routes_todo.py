@@ -37,11 +37,12 @@ async def get_todos(
     completed: bool | None = None,
     overdue: bool | None = None,
     priority: str | None = None,
+    search: str | None = None,
     current_user: str = Depends(get_current_user),
     todo_service: TodoUseCase = Depends(get_todo_usecase),
 ):
     # Pass filters to service with user_id
-    todos = todo_service.get_all(user_id=current_user, category_id=category_id, completed=completed, overdue=overdue, priority=priority)
+    todos = todo_service.get_all(user_id=current_user, category_id=category_id, completed=completed, overdue=overdue, priority=priority, search=search)
     return create_json_response("Todos fetched", {"todos": todos})
 
 

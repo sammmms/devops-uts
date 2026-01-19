@@ -16,6 +16,7 @@ class TodoRepository(ITodoRepository):
         completed: bool | None = None,
         overdue: bool | None = None,
         priority: str | None = None,
+        search: str | None = None,
     ) -> List[TodoModel]:
         db = self.data_source.get_session()
         try:
@@ -33,6 +34,11 @@ class TodoRepository(ITodoRepository):
                 )
             if priority is not None:
                 query = query.filter(Todo.priority == priority)
+            if search is not None and search.strip():
+                search_term = f"%{search.strip()}%"
+                query = query.filter(
+                    (Todo.name.ilike(search_term)) | (Todo.description.ilike(search_term))
+                )
 
             todos = query.all()
             return [

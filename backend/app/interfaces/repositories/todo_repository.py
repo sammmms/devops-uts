@@ -11,6 +11,7 @@ class ITodoRepository(ABC):
         completed: bool | None = None,
         overdue: bool | None = None,
         priority: str | None = None,
+        search: str | None = None,
     ) -> List[TodoModel]:
         pass
 

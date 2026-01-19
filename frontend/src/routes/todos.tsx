@@ -28,7 +28,7 @@ import {
   SmartFAB,
 } from "@/components";
 import * as React from "react";
-import { Filter, X } from "lucide-react";
+import { Filter, X, Search } from "lucide-react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { AnimatePresence, motion } from "motion/react";
 
@@ -42,7 +42,7 @@ const categoriesQuery = queryOptions({
 
 const todosQuery = (
   categoryId?: number | null,
-  filters?: { completed?: boolean; overdue?: boolean; priority?: string }
+  filters?: { completed?: boolean; overdue?: boolean; priority?: string; search?: string }
 ) =>
   queryOptions({
     queryKey: ["todos", categoryId, filters],
@@ -55,6 +55,7 @@ const todosQuery = (
         params.completed = filters.completed;
       if (filters?.overdue !== undefined) params.overdue = filters.overdue;
       if (filters?.priority !== undefined) params.priority = filters.priority;
+      if (filters?.search !== undefined && filters.search.trim()) params.search = filters.search.trim();
 
       const res = await axiosInstance.get("/todo", { params });
       return res.data.todos;
@@ -66,19 +67,45 @@ export const Route = createFileRoute("/todos")({
   component: TodosPage,
   validateSearch: (
     search: Record<string, unknown>
-  ): { filter?: string; categoryId?: number; priority?: string } => {
+  ): { filter?: string; categoryId?: number; priority?: string; search?: string } => {
     return {
       filter: (search.filter as string) || undefined,
       categoryId: search.categoryId ? Number(search.categoryId) : undefined,
       priority: (search.priority as string) || undefined,
+      search: (search.search as string) || undefined,
     };
   },
 });
 
 function TodosPage() {
   const navigate = Route.useNavigate();
-  const { filter, categoryId: selectedCategoryIdParam, priority: priorityFilter } = Route.useSearch();
+  const { filter, categoryId: selectedCategoryIdParam, priority: priorityFilter, search: searchParam } = Route.useSearch();
   const queryClient = useQueryClient();
+
+  // Search state for debouncing
+  const [searchInput, setSearchInput] = React.useState(searchParam || "");
+  
+  // Debounce search - update URL after user stops typing
+  React.useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      const trimmedSearch = searchInput.trim();
+      if (trimmedSearch !== (searchParam || "")) {
+        navigate({
+          search: (prev) => ({
+            ...prev,
+            search: trimmedSearch || undefined,
+          }),
+        });
+      }
+    }, 400); // 400ms debounce delay
+
+    return () => clearTimeout(timeoutId);
+  }, [searchInput, searchParam, navigate]);
+
+  // Sync searchInput with URL param when it changes externally
+  React.useEffect(() => {
+    setSearchInput(searchParam || "");
+  }, [searchParam]);
 
   // Category Dialog State
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
@@ -103,6 +130,7 @@ function TodosPage() {
       filter === "completed" ? true : filter === "pending" ? false : undefined,
     overdue: filter === "overdue" ? true : undefined,
     priority: priorityFilter,
+    search: searchParam,
   };
 
   // Handlers
@@ -268,6 +296,8 @@ function TodosPage() {
                   handleDeleteTodo={handleDeleteTodo}
                   handleEditTodo={handleEditTodo}
                   handleToggleComplete={handleToggleComplete}
+                  searchInput={searchInput}
+                  onSearchChange={setSearchInput}
                 />
               </React.Suspense>
             </div>
@@ -357,6 +387,28 @@ function TodosPage() {
                     </div>
 
                     <div className="grid gap-4">
+                      {/* Search Input */}
+                      <div>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Search</p>
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <input
+                            type="text"
+                            placeholder="Search todos..."
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
+                            className="h-12 w-full pl-10 pr-10 text-base bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          {searchInput && (
+                            <button
+                              onClick={() => setSearchInput("")}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
                       {/* Status Filter */}
                       <div>
                         <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Status</p>
@@ -458,6 +510,8 @@ function TodosSection({
   handleDeleteTodo,
   handleEditTodo,
   handleToggleComplete,
+  searchInput,
+  onSearchChange,
 }: any) {
   const navigate = Route.useNavigate();
   const { filter, priority } = Route.useSearch();
@@ -564,6 +618,28 @@ function TodosSection({
             </div>
 
             {/* Mobile Controls (FABs) - Replaced by SmartFAB */}
+          </div>
+        </div>
+
+        {/* Search Bar - Below Header */}
+        <div className="hidden sm:block mb-4">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search todos by title or description..."
+              value={searchInput}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="h-12 w-full pl-12 pr-10 text-sm bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {searchInput && (
+              <button
+                onClick={() => onSearchChange("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 

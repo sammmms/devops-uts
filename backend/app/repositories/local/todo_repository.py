@@ -15,6 +15,7 @@ class TodoRepository(ITodoRepository):
         completed: bool | None = None,
         overdue: bool | None = None,
         priority: str | None = None,
+        search: str | None = None,
     ) -> List[TodoModel]:
         todos = self.data_source.todos.values()
         
@@ -29,6 +30,9 @@ class TodoRepository(ITodoRepository):
             todos = [t for t in todos if t.deadline and t.deadline < today and not t.completed]
         if priority is not None:
             todos = [t for t in todos if t.priority == priority]
+        if search is not None and search.strip():
+            search_lower = search.strip().lower()
+            todos = [t for t in todos if search_lower in (t.name or "").lower() or search_lower in (t.description or "").lower()]
             
         return list(todos)
 
