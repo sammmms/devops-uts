@@ -111,12 +111,15 @@ function DashboardPage() {
     value: number;
     color: string;
   }>;
-  const priorityMaxCount = Math.max(...(priorityData.map((d) => d.value) || [1]), 1);
+  const priorityMaxCount = Math.max(
+    ...(priorityData.map((d) => d.value) || [1]),
+    1
+  );
   const priorityLabels: Record<string, string> = {
     low: "Low",
-    medium: "Medium", 
+    medium: "Medium",
     high: "High",
-    urgent: "Urgent"
+    urgent: "Urgent",
   };
 
   return (
@@ -191,12 +194,16 @@ function DashboardPage() {
                         <span className="font-medium text-gray-700 dark:text-gray-300">
                           {item.name}
                         </span>
-                        <span className="text-gray-500">{item.value} tasks</span>
+                        <span className="text-gray-500">
+                          {item.value} tasks
+                        </span>
                       </div>
                       <div className="h-3 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
-                          animate={{ width: `${(item.value / maxCount) * 100}%` }}
+                          animate={{
+                            width: `${(item.value / maxCount) * 100}%`,
+                          }}
                           transition={{ duration: 1, delay: 0.5 + index * 0.1 }}
                           className="h-full bg-blue-500 rounded-full"
                         />
@@ -222,19 +229,23 @@ function DashboardPage() {
                 Priority Distribution
               </h3>
               <div className="space-y-4">
-                {priorityData.some(item => item.value > 0) ? (
+                {priorityData.some((item) => item.value > 0) ? (
                   priorityData.map((item, index: number) => (
                     <div key={index} className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="font-medium text-gray-700 dark:text-gray-300">
                           {priorityLabels[item.name] || item.name}
                         </span>
-                        <span className="text-gray-500">{item.value} tasks</span>
+                        <span className="text-gray-500">
+                          {item.value} tasks
+                        </span>
                       </div>
                       <div className="h-3 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
-                          animate={{ width: `${(item.value / priorityMaxCount) * 100}%` }}
+                          animate={{
+                            width: `${(item.value / priorityMaxCount) * 100}%`,
+                          }}
                           transition={{ duration: 1, delay: 0.6 + index * 0.1 }}
                           className="h-full rounded-full"
                           style={{ backgroundColor: item.color }}

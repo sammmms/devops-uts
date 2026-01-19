@@ -164,7 +164,9 @@ const Form = ({
             })
           }
         >
-          <Select.Trigger className={`inline-flex items-center justify-between gap-2 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 dark:border-gray-600 ${priorityOptions.find(p => p.value === (todo.priority || "medium"))?.color || ""}`}>
+          <Select.Trigger
+            className={`inline-flex items-center justify-between gap-2 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 dark:border-gray-600 ${priorityOptions.find((p) => p.value === (todo.priority || "medium"))?.color || ""}`}
+          >
             <Select.Value placeholder="Select Priority" />
             <Select.Icon>
               <ChevronDownIcon />

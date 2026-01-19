@@ -42,7 +42,12 @@ const categoriesQuery = queryOptions({
 
 const todosQuery = (
   categoryId?: number | null,
-  filters?: { completed?: boolean; overdue?: boolean; priority?: string; search?: string }
+  filters?: {
+    completed?: boolean;
+    overdue?: boolean;
+    priority?: string;
+    search?: string;
+  }
 ) =>
   queryOptions({
     queryKey: ["todos", categoryId, filters],
@@ -55,7 +60,8 @@ const todosQuery = (
         params.completed = filters.completed;
       if (filters?.overdue !== undefined) params.overdue = filters.overdue;
       if (filters?.priority !== undefined) params.priority = filters.priority;
-      if (filters?.search !== undefined && filters.search.trim()) params.search = filters.search.trim();
+      if (filters?.search !== undefined && filters.search.trim())
+        params.search = filters.search.trim();
 
       const res = await axiosInstance.get("/todo", { params });
       return res.data.todos;
@@ -67,7 +73,12 @@ export const Route = createFileRoute("/todos")({
   component: TodosPage,
   validateSearch: (
     search: Record<string, unknown>
-  ): { filter?: string; categoryId?: number; priority?: string; search?: string } => {
+  ): {
+    filter?: string;
+    categoryId?: number;
+    priority?: string;
+    search?: string;
+  } => {
     return {
       filter: (search.filter as string) || undefined,
       categoryId: search.categoryId ? Number(search.categoryId) : undefined,
@@ -79,12 +90,17 @@ export const Route = createFileRoute("/todos")({
 
 function TodosPage() {
   const navigate = Route.useNavigate();
-  const { filter, categoryId: selectedCategoryIdParam, priority: priorityFilter, search: searchParam } = Route.useSearch();
+  const {
+    filter,
+    categoryId: selectedCategoryIdParam,
+    priority: priorityFilter,
+    search: searchParam,
+  } = Route.useSearch();
   const queryClient = useQueryClient();
 
   // Search state for debouncing
   const [searchInput, setSearchInput] = React.useState(searchParam || "");
-  
+
   // Debounce search - update URL after user stops typing
   React.useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -389,7 +405,9 @@ function TodosPage() {
                     <div className="grid gap-4">
                       {/* Search Input */}
                       <div>
-                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Search</p>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                          Search
+                        </p>
                         <div className="relative">
                           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                           <input
@@ -411,60 +429,73 @@ function TodosPage() {
                       </div>
                       {/* Status Filter */}
                       <div>
-                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Status</p>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                          Status
+                        </p>
                         <div className="grid gap-2">
-                          {["all", "completed", "pending", "overdue"].map((f) => (
-                            <Button
-                              key={f}
-                              variant={
-                                filters.completed ===
-                                  (f === "completed"
-                                    ? true
-                                    : f === "pending"
-                                      ? false
-                                      : undefined) &&
-                                filters.overdue ===
-                                  (f === "overdue" ? true : undefined)
-                                  ? "default"
-                                  : "outline"
-                              }
-                              className="justify-start capitalize h-12 text-base"
-                              onClick={() => {
-                                navigate({
-                                  search: (prev) => ({
-                                    ...prev,
-                                    filter: f === "all" ? undefined : f,
-                                  }),
-                                });
-                              }}
-                            >
-                              {f === "all" ? "All Status" : f}
-                            </Button>
-                          ))}
+                          {["all", "completed", "pending", "overdue"].map(
+                            (f) => (
+                              <Button
+                                key={f}
+                                variant={
+                                  filters.completed ===
+                                    (f === "completed"
+                                      ? true
+                                      : f === "pending"
+                                        ? false
+                                        : undefined) &&
+                                  filters.overdue ===
+                                    (f === "overdue" ? true : undefined)
+                                    ? "default"
+                                    : "outline"
+                                }
+                                className="justify-start capitalize h-12 text-base"
+                                onClick={() => {
+                                  navigate({
+                                    search: (prev) => ({
+                                      ...prev,
+                                      filter: f === "all" ? undefined : f,
+                                    }),
+                                  });
+                                }}
+                              >
+                                {f === "all" ? "All Status" : f}
+                              </Button>
+                            )
+                          )}
                         </div>
                       </div>
                       {/* Priority Filter */}
                       <div>
-                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Priority</p>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                          Priority
+                        </p>
                         <div className="grid gap-2">
-                          {["all", "low", "medium", "high", "urgent"].map((p) => (
-                            <Button
-                              key={p}
-                              variant={filters.priority === (p === "all" ? undefined : p) ? "default" : "outline"}
-                              className="justify-start capitalize h-12 text-base"
-                              onClick={() => {
-                                navigate({
-                                  search: (prev) => ({
-                                    ...prev,
-                                    priority: p === "all" ? undefined : p,
-                                  }),
-                                });
-                                setIsFilterDialogOpen(false);
-                              }}
-                            >
-                              {p === "all" ? "All Priority" : p}
-                            </Button>
-                          ))}
+                          {["all", "low", "medium", "high", "urgent"].map(
+                            (p) => (
+                              <Button
+                                key={p}
+                                variant={
+                                  filters.priority ===
+                                  (p === "all" ? undefined : p)
+                                    ? "default"
+                                    : "outline"
+                                }
+                                className="justify-start capitalize h-12 text-base"
+                                onClick={() => {
+                                  navigate({
+                                    search: (prev) => ({
+                                      ...prev,
+                                      priority: p === "all" ? undefined : p,
+                                    }),
+                                  });
+                                  setIsFilterDialogOpen(false);
+                                }}
+                              >
+                                {p === "all" ? "All Priority" : p}
+                              </Button>
+                            )
+                          )}
                         </div>
                       </div>
                     </div>
