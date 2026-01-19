@@ -358,10 +358,10 @@ devops-uts/
 
 ### Prerequisites
 
-- **Node.js 18+** (for frontend)
-- **Python 3.11+** (for backend)
-- **Docker/Podman** (optional, for local containerization)
-- **kubectl** (optional, for testing with local k3s)
+- **Node.js 18+** (frontend)
+- **Python 3.11+** (backend)
+- **Docker/Podman** (optional, local containerization)
+- **kubectl** (optional, testing with local k3s)
 
 ### Backend Setup
 
