@@ -1,4 +1,4 @@
-import type { TodoModel } from "@/models/TodoModel";
+import type { TodoModel, Priority } from "@/models/TodoModel";
 import type { CategoryModel } from "@/models/CategoryModel";
 import axiosInstance from "@/utils/axios_instance";
 import { useQuery } from "@tanstack/react-query";
@@ -10,6 +10,7 @@ import {
   Tag,
   AlertTriangle,
   Check as CheckIcon,
+  Flag,
 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Cross2Icon } from "@radix-ui/react-icons";
@@ -21,6 +22,13 @@ interface TodoCardProps {
   handleDelete: () => void;
   onToggleComplete: (todo: TodoModel) => void;
 }
+
+const priorityConfig: Record<Priority, { label: string; color: string; bgColor: string }> = {
+  low: { label: "Low", color: "text-gray-600 dark:text-gray-400", bgColor: "bg-gray-100 dark:bg-gray-800" },
+  medium: { label: "Medium", color: "text-blue-600 dark:text-blue-400", bgColor: "bg-blue-50 dark:bg-blue-900/30" },
+  high: { label: "High", color: "text-orange-600 dark:text-orange-400", bgColor: "bg-orange-50 dark:bg-orange-900/30" },
+  urgent: { label: "Urgent", color: "text-red-600 dark:text-red-400", bgColor: "bg-red-50 dark:bg-red-900/30" },
+};
 
 const TodoCard = ({
   todo,
@@ -58,6 +66,9 @@ const TodoCard = ({
     handleDelete();
     setIsDeleteOpen(false);
   };
+
+  const priority = todo.priority || "medium";
+  const priorityStyle = priorityConfig[priority];
 
   return (
     <motion.div
@@ -104,6 +115,11 @@ const TodoCard = ({
           )}
 
           <div className="flex flex-wrap gap-2 text-xs font-medium mt-6">
+            {/* Priority Badge */}
+            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${priorityStyle.bgColor} ${priorityStyle.color}`}>
+              <Flag className="w-3.5 h-3.5" />
+              <span>{priorityStyle.label}</span>
+            </div>
             {todo.deadline && (
               <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-lg text-gray-600 dark:text-gray-400">
                 <Calendar className="w-3.5 h-3.5" />

@@ -1,7 +1,7 @@
-import type { TodoModel } from "@/models/TodoModel";
+import type { TodoModel, Priority } from "@/models/TodoModel";
 import type { CategoryModel } from "@/models/CategoryModel";
 import axiosInstance from "@/utils/axios_instance";
-import { Plus } from "lucide-react";
+import { Plus, Flag } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Label } from "@radix-ui/react-label";
@@ -9,6 +9,13 @@ import * as Checkbox from "@radix-ui/react-checkbox";
 import * as Select from "@radix-ui/react-select";
 import { CheckIcon, ChevronDownIcon } from "@radix-ui/react-icons";
 import DatePicker from "./DatePicker";
+
+const priorityOptions: { value: Priority; label: string; color: string }[] = [
+  { value: "low", label: "Low", color: "text-gray-500" },
+  { value: "medium", label: "Medium", color: "text-blue-500" },
+  { value: "high", label: "High", color: "text-orange-500" },
+  { value: "urgent", label: "Urgent", color: "text-red-500" },
+];
 
 interface FormProps {
   selectedTodo?: TodoModel;
@@ -27,6 +34,7 @@ const Form = ({
     description: "",
     deadline: "",
     completed: false,
+    priority: "medium",
     category_id: undefined,
   });
 
@@ -58,6 +66,7 @@ const Form = ({
         description: "",
         deadline: "",
         completed: false,
+        priority: "medium",
         category_id: undefined,
       });
     }
@@ -80,6 +89,7 @@ const Form = ({
         description: "",
         deadline: "",
         completed: false,
+        priority: "medium",
         category_id: undefined,
       });
     }
@@ -140,6 +150,53 @@ const Form = ({
           onChange={(date) => setTodo({ ...todo, deadline: date })}
           placeholder="Select deadline"
         />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Priority
+        </Label>
+        <Select.Root
+          value={todo.priority || "medium"}
+          onValueChange={(val) =>
+            setTodo({
+              ...todo,
+              priority: val as Priority,
+            })
+          }
+        >
+          <Select.Trigger className="inline-flex items-center justify-between gap-2 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 dark:border-gray-600">
+            <div className="flex items-center gap-2">
+              <Flag className="w-4 h-4" />
+              <Select.Value placeholder="Select Priority" />
+            </div>
+            <Select.Icon>
+              <ChevronDownIcon />
+            </Select.Icon>
+          </Select.Trigger>
+          <Select.Portal>
+            <Select.Content className="z-50 rounded-md border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-600 shadow-md">
+              <Select.Viewport className="p-1">
+                {priorityOptions.map((option) => (
+                  <Select.Item
+                    key={option.value}
+                    value={option.value}
+                    className={`relative flex cursor-pointer select-none items-center rounded-sm px-3 py-2 text-sm outline-none focus:bg-gray-100 dark:focus:bg-gray-700 ${option.color}`}
+                  >
+                    <Select.ItemText>
+                      <span className="flex items-center gap-2">
+                        <Flag className="w-3.5 h-3.5" />
+                        {option.label}
+                      </span>
+                    </Select.ItemText>
+                    <Select.ItemIndicator className="absolute right-2 inline-flex items-center">
+                      <CheckIcon />
+                    </Select.ItemIndicator>
+                  </Select.Item>
+                ))}
+              </Select.Viewport>
+            </Select.Content>
+          </Select.Portal>
+        </Select.Root>
       </div>
       {!hideCategory && (
         <div className="flex flex-col gap-2">

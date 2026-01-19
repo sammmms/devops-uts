@@ -39,6 +39,7 @@ class TodoRepository(ITodoRepository):
                     deadline=t.deadline,
                     description=t.description,
                     completed=t.completed,
+                    priority=t.priority,
                     category_id=t.category_id,
                     user_id=t.user_id,
                 )
@@ -58,6 +59,7 @@ class TodoRepository(ITodoRepository):
                     deadline=todo.deadline,
                     description=todo.description,
                     completed=todo.completed,
+                    priority=todo.priority,
                     category_id=todo.category_id,
                     user_id=todo.user_id,
                 )
@@ -73,6 +75,7 @@ class TodoRepository(ITodoRepository):
                 deadline=todo.deadline,
                 description=todo.description,
                 completed=todo.completed,
+                priority=todo.priority,
                 category_id=todo.category_id,
                 user_id=todo.user_id,
             )
@@ -85,6 +88,7 @@ class TodoRepository(ITodoRepository):
                 deadline=db_todo.deadline,
                 description=db_todo.description,
                 completed=db_todo.completed,
+                priority=db_todo.priority,
                 category_id=db_todo.category_id,
                 user_id=db_todo.user_id,
             )
@@ -102,6 +106,7 @@ class TodoRepository(ITodoRepository):
             db_todo.deadline = todo.deadline
             db_todo.description = todo.description
             db_todo.completed = todo.completed
+            db_todo.priority = todo.priority
             db_todo.category_id = todo.category_id
             
             db.commit()
@@ -112,6 +117,7 @@ class TodoRepository(ITodoRepository):
                 deadline=db_todo.deadline,
                 description=db_todo.description,
                 completed=db_todo.completed,
+                priority=db_todo.priority,
                 category_id=db_todo.category_id,
                 user_id=db_todo.user_id,
             )

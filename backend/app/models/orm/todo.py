@@ -10,6 +10,7 @@ class Todo(Base):
     description = Column(Text, nullable=True)
     deadline = Column(Date, nullable=True)
     completed = Column(Boolean, default=False)
+    priority = Column(String, default="medium", nullable=False)  # low, medium, high, urgent
     
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     user_id = Column(String, ForeignKey("users.id"), nullable=True)
