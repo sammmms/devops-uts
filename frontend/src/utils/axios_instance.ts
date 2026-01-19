@@ -6,6 +6,7 @@ const axiosInstance = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  adapter: "xhr",
 });
 
 // Add token to all requests
@@ -28,7 +29,7 @@ axiosInstance.interceptors.response.use(
       window.location.href = "/login";
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default axiosInstance;
