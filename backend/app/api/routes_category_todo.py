@@ -1,30 +1,11 @@
 from fastapi import APIRouter, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.utils.response_util import create_json_response
 from app.usecases.todo_usecase import TodoUseCase
-# from app.db.todo_database import TodoDatabase # Removed
-from app.usecases.auth_usecase import decode_access_token
 
 from app.dependencies import get_todo_usecase
+from app.api.auth_dependencies import get_current_user
 
 router = APIRouter(prefix="/category-todos", tags=["category-todos"])
-security = HTTPBearer()
-# todo_services = TodoServices() # Removed
-
-
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
-    """Get current user ID from JWT token"""
-    token = credentials.credentials
-    try:
-        payload = decode_access_token(token)
-        if not payload:
-            raise Exception("Invalid token")
-        user_id = payload.get("sub")
-        if not user_id:
-            raise Exception("Invalid token")
-        return user_id
-    except Exception:
-        raise Exception("Invalid token")
 
 
 @router.post("/{id}/todo")

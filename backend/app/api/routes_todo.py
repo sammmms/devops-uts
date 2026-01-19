@@ -1,35 +1,14 @@
 from fastapi import APIRouter, HTTPException, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.models.pydantic.todo_model import TodoCreateModel, TodoModel, TodoResponseModel
 from app.usecases.todo_usecase import TodoUseCase
 
 from app.utils.response_util import create_json_response
 from app.usecases.category_usecase import CategoryUseCase
 
-from app.usecases.auth_usecase import AuthUseCase, decode_access_token # decode_access_token needs check if it is exported from usecase
-
 from app.dependencies import get_todo_usecase, get_category_usecase
+from app.api.auth_dependencies import get_current_user
 
 router = APIRouter(prefix="/todo", tags=["todo"])
-security = HTTPBearer()
-# todo_service = TodoServices() # Removed
-# category_service = CategoryServices() # Removed
-# user_db = UserDatabase() # Use AuthServices or Repo if needed
-
-
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
-    """Get current user ID from JWT token"""
-    token = credentials.credentials
-    try:
-        payload = decode_access_token(token)
-        if not payload:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        user_id = payload.get("sub")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        return user_id
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid token")
 
 
 @router.post("")

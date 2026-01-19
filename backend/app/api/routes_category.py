@@ -1,34 +1,13 @@
 from fastapi import APIRouter, HTTPException, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.utils.response_util import create_json_response
-# from app.db.category_database import CategoryDatabase # Removed
 from app.models.pydantic.category_model import CategoryCreateModel, CategoryModel
 from app.usecases.category_usecase import CategoryUseCase
 from app.usecases.todo_usecase import TodoUseCase
-# from app.db.todo_database import TodoDatabase # Removed
-from app.usecases.auth_usecase import decode_access_token
 
 from app.dependencies import get_category_usecase, get_todo_usecase
+from app.api.auth_dependencies import get_current_user
 
 router = APIRouter(prefix="/category", tags=["category"])
-security = HTTPBearer()
-# category_service = CategoryServices() # Removed
-# todo_service = TodoServices() # Removed
-
-
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
-    """Get current user ID from JWT token"""
-    token = credentials.credentials
-    try:
-        payload = decode_access_token(token)
-        if not payload:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        user_id = payload.get("sub")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        return user_id
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid token")
 
 
 @router.post("")
