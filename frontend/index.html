@@ -60,6 +60,29 @@
 
     <!-- Decorative background (aesthetic only; doesn't affect app interaction) -->
     <!-- Decorative background styles moved to src/styles.css -->
+    <style>
+      .decorative {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      .decorative svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      .blob {
+        mix-blend-mode: screen;
+        opacity: 0.25;
+        filter: blur(80px);
+        -webkit-filter: blur(80px);
+        transform-origin: center;
+        will-change: transform;
+      }
+    </style>
   </head>
 
   <body>
