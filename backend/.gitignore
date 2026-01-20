@@ -1,4 +1,26 @@
 __pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
 venv/
+env/
+.venv/
+
+# Environment Variables
 .env
+.env.*
+
+# OS Files
 .DS_Store
+
+# Distribution / Builds
+build/
+dist/
+*.egg-info/
+
+# Testing / Code Quality
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
