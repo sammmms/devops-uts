@@ -1,4 +1,5 @@
 import axiosInstance from "@/utils/axios_instance";
+import { seedUserData } from "@/utils/mockBackend";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 interface User {
@@ -17,6 +18,7 @@ interface AuthContextType {
     username: string,
     password: string
   ) => Promise<void>;
+  loginWithOAuth: (provider: "google" | "github") => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -49,7 +51,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         : { username: emailOrUsername, password };
 
       const response = await axiosInstance.post("/auth/login", body);
-
       const { access_token, user: userData } = response.data.data;
 
       localStorage.setItem("authToken", access_token);
@@ -114,7 +115,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (error.response?.data?.detail) {
         const detail = error.response.data.detail;
         if (Array.isArray(detail)) {
-          // Handle Pydantic validation errors
           message = detail
             .map((err: any) => err.msg || JSON.stringify(err))
             .join("\n");
@@ -128,6 +128,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       throw new Error(message);
+    }
+  };
+
+  const loginWithOAuth = async (provider: "google" | "github") => {
+    setIsLoading(true);
+    try {
+      await new Promise((r) => setTimeout(r, 150));
+
+      const email =
+        provider === "google"
+          ? "samuel.dev@gmail.com"
+          : "sammmms@github.user";
+      const username = provider === "google" ? "samuel" : "sammmms";
+      const userId = `${provider}-user-demo`;
+
+      const userData: User = {
+        id: userId,
+        email,
+        username,
+      };
+      const access_token = `oauth-${provider}-${userId}`;
+
+      seedUserData(userId);
+
+      localStorage.setItem("authToken", access_token);
+      localStorage.setItem("authUser", JSON.stringify(userData));
+      setToken(access_token);
+      setUser(userData);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -146,6 +176,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         isLoading,
         login,
         register,
+        loginWithOAuth,
         logout,
         isAuthenticated: !!token,
       }}

@@ -8,4 +8,5 @@ export interface TodoModel {
   completed: boolean;
   priority: Priority;
   category_id?: number;
+  user_id?: string;
 }
