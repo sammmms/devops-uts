@@ -1,5 +1,6 @@
 import type { CategoryModel } from "@/models/CategoryModel";
 import type { TodoModel } from "@/models/TodoModel";
+import { supabase } from "./supabaseClient";
 
 interface StoredUser {
   id: string;
@@ -13,7 +14,7 @@ const STORAGE_KEY_USERS = "devops_todo_users";
 const STORAGE_KEY_CATEGORIES = "devops_todo_categories";
 const STORAGE_KEY_TODOS = "devops_todo_todos";
 
-function getStoredUsers(): StoredUser[] {
+function getLocalUsers(): StoredUser[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_USERS);
     return raw ? JSON.parse(raw) : [];
@@ -22,11 +23,11 @@ function getStoredUsers(): StoredUser[] {
   }
 }
 
-function saveStoredUsers(users: StoredUser[]) {
+function saveLocalUsers(users: StoredUser[]) {
   localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
 }
 
-function getStoredCategories(userId?: string): CategoryModel[] {
+function getLocalCategories(userId?: string): CategoryModel[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_CATEGORIES);
     const all = raw ? JSON.parse(raw) : [];
@@ -37,11 +38,11 @@ function getStoredCategories(userId?: string): CategoryModel[] {
   }
 }
 
-function saveStoredCategories(categories: any[]) {
+function saveLocalCategories(categories: any[]) {
   localStorage.setItem(STORAGE_KEY_CATEGORIES, JSON.stringify(categories));
 }
 
-function getStoredTodos(userId?: string): TodoModel[] {
+function getLocalTodos(userId?: string): TodoModel[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_TODOS);
     const all = raw ? JSON.parse(raw) : [];
@@ -52,7 +53,7 @@ function getStoredTodos(userId?: string): TodoModel[] {
   }
 }
 
-function saveStoredTodos(todos: any[]) {
+function saveLocalTodos(todos: any[]) {
   localStorage.setItem(STORAGE_KEY_TODOS, JSON.stringify(todos));
 }
 
@@ -67,9 +68,20 @@ function getCurrentUserId(): string | undefined {
   }
 }
 
-export function seedUserData(userId: string) {
-  const existingCats = getStoredCategories(userId);
-  if (existingCats.length > 0) return;
+export async function seedUserData(userId: string) {
+  // Check if categories already exist in Supabase
+  try {
+    const { data: existing } = await supabase
+      .from("devops_categories")
+      .select("id")
+      .eq("user_id", userId)
+      .limit(1);
+
+    if (existing && existing.length > 0) return;
+  } catch {
+    // If Supabase check fails, check local
+    if (getLocalCategories(userId).length > 0) return;
+  }
 
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -81,14 +93,87 @@ export function seedUserData(userId: string) {
   const nextWeekDate = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
   const farDate = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000);
 
-  const baseId = Date.now();
+  try {
+    // Insert categories into Supabase
+    const { data: cats, error: catErr } = await supabase
+      .from("devops_categories")
+      .insert([
+        { user_id: userId, name: "DevOps & Cloud 🚀" },
+        { user_id: userId, name: "Portfolio & Apps 💻" },
+        { user_id: userId, name: "Personal & Learning 📚" },
+      ])
+      .select();
 
+    if (!catErr && cats && cats.length >= 3) {
+      await supabase.from("devops_todos").insert([
+        {
+          user_id: userId,
+          category_id: cats[1].id,
+          name: "Deploy Kasir to custom domain kasir.wsnsam.my.id",
+          description: "Setup Vercel project, Supabase database, and Cloudflare DNS",
+          completed: true,
+          priority: "high",
+          deadline: formatDate(now),
+        },
+        {
+          user_id: userId,
+          category_id: cats[0].id,
+          name: "Add User Registration & OAuth login to DevOps Todo",
+          description: "Support registration, Google/GitHub OAuth, and full task workflow",
+          completed: true,
+          priority: "urgent",
+          deadline: formatDate(now),
+        },
+        {
+          user_id: userId,
+          category_id: cats[0].id,
+          name: "Configure Cloudflare CNAME for todo.wsnsam.my.id",
+          description: "Target CNAME: e4c6d4d67fbb3d87.vercel-dns-017.com",
+          completed: false,
+          priority: "high",
+          deadline: formatDate(tomorrowDate),
+        },
+        {
+          user_id: userId,
+          category_id: cats[0].id,
+          name: "Audit legacy CI/CD runner pipelines",
+          description: "Check stale docker image cache and secrets rotation",
+          completed: false,
+          priority: "high",
+          deadline: formatDate(pastDate),
+        },
+        {
+          user_id: userId,
+          category_id: cats[0].id,
+          name: "Practice Kubernetes lab with Helm charts",
+          description: "Deploy ingress-nginx and cert-manager on test cluster",
+          completed: false,
+          priority: "medium",
+          deadline: formatDate(nextWeekDate),
+        },
+        {
+          user_id: userId,
+          category_id: cats[2].id,
+          name: "Explore TanStack Start and Server Functions",
+          description: "Study routing, SSR, and database pooling patterns",
+          completed: false,
+          priority: "low",
+          deadline: formatDate(farDate),
+        },
+      ]);
+      return;
+    }
+  } catch (err) {
+    console.warn("Supabase seed failed, falling back to local storage:", err);
+  }
+
+  // Fallback to local storage if Supabase is unreachable
+  const baseId = Date.now();
   const defaultCategories: any[] = [
     { id: baseId + 1, name: "DevOps & Cloud 🚀", user_id: userId },
     { id: baseId + 2, name: "Portfolio & Apps 💻", user_id: userId },
     { id: baseId + 3, name: "Personal & Learning 📚", user_id: userId },
   ];
-
   const defaultTodos: any[] = [
     {
       id: baseId + 101,
@@ -120,51 +205,17 @@ export function seedUserData(userId: string) {
       category_id: baseId + 1,
       user_id: userId,
     },
-    {
-      id: baseId + 104,
-      name: "Audit legacy CI/CD runner pipelines",
-      description: "Check stale docker image cache and secrets rotation",
-      completed: false,
-      priority: "high",
-      deadline: formatDate(pastDate),
-      category_id: baseId + 1,
-      user_id: userId,
-    },
-    {
-      id: baseId + 105,
-      name: "Practice Kubernetes lab with Helm charts",
-      description: "Deploy ingress-nginx and cert-manager on test cluster",
-      completed: false,
-      priority: "medium",
-      deadline: formatDate(nextWeekDate),
-      category_id: baseId + 1,
-      user_id: userId,
-    },
-    {
-      id: baseId + 106,
-      name: "Explore TanStack Start and Server Functions",
-      description: "Study routing, SSR, and database pooling patterns",
-      completed: false,
-      priority: "low",
-      deadline: formatDate(farDate),
-      category_id: baseId + 3,
-      user_id: userId,
-    },
   ];
-
-  const allCats = getStoredCategories();
-  const allTodos = getStoredTodos();
-
-  saveStoredCategories([...allCats, ...defaultCategories]);
-  saveStoredTodos([...allTodos, ...defaultTodos]);
+  saveLocalCategories([...getLocalCategories(), ...defaultCategories]);
+  saveLocalTodos([...getLocalTodos(), ...defaultTodos]);
 }
 
-export function handleMockApi(
+export async function handleMockApi(
   method: string,
   url: string,
   data?: any,
   params?: any
-): { status: number; data: any } {
+): Promise<{ status: number; data: any }> {
   const normMethod = method.toUpperCase();
   const cleanUrl = url.replace(/^\/api\/v1/, "");
   const currentUserId = getCurrentUserId();
@@ -174,47 +225,85 @@ export function handleMockApi(
     const identifier = (data?.email || data?.username || "").trim().toLowerCase();
     const password = data?.password;
 
-    const users = getStoredUsers();
-    let user = users.find(
-      (u) =>
-        u.email.toLowerCase() === identifier ||
-        u.username.toLowerCase() === identifier
-    );
+    try {
+      const { data: users } = await supabase
+        .from("devops_users")
+        .select("*")
+        .or(`email.eq.${identifier},username.eq.${identifier}`)
+        .limit(1);
 
-    if (!user) {
-      // Auto-provision user on first attempt for smooth experience if credentials entered
-      const username = identifier.includes("@")
-        ? identifier.split("@")[0]
-        : identifier;
-      const email = identifier.includes("@")
-        ? identifier
-        : `${identifier}@example.com`;
-      user = {
-        id: `user-${Date.now()}`,
-        email,
-        username,
-        password,
-      };
-      users.push(user);
-      saveStoredUsers(users);
-      seedUserData(user.id);
-    }
+      let user = users && users[0];
 
-    return {
-      status: 200,
-      data: {
-        message: "Login successful",
+      if (!user) {
+        const username = identifier.includes("@")
+          ? identifier.split("@")[0]
+          : identifier;
+        const email = identifier.includes("@")
+          ? identifier
+          : `${identifier}@example.com`;
+
+        const newId = `user-${Date.now()}`;
+        const { data: created, error } = await supabase
+          .from("devops_users")
+          .insert({
+            id: newId,
+            email,
+            username,
+            password_hash: password,
+          })
+          .select()
+          .single();
+
+        user = !error && created ? created : { id: newId, email, username };
+        await seedUserData(user.id);
+      }
+
+      return {
+        status: 200,
         data: {
-          access_token: `token-${user.id}-${Date.now()}`,
-          token_type: "bearer",
-          user: {
-            id: user.id,
-            email: user.email,
-            username: user.username,
+          message: "Login successful",
+          data: {
+            access_token: `token-${user.id}-${Date.now()}`,
+            token_type: "bearer",
+            user: {
+              id: user.id,
+              email: user.email,
+              username: user.username,
+            },
           },
         },
-      },
-    };
+      };
+    } catch {
+      // Local fallback
+      const users = getLocalUsers();
+      let user = users.find(
+        (u) =>
+          u.email.toLowerCase() === identifier ||
+          u.username.toLowerCase() === identifier
+      );
+      if (!user) {
+        user = {
+          id: `user-${Date.now()}`,
+          email: identifier.includes("@") ? identifier : `${identifier}@example.com`,
+          username: identifier.includes("@") ? identifier.split("@")[0] : identifier,
+          password,
+        };
+        users.push(user);
+        saveLocalUsers(users);
+        await seedUserData(user.id);
+      }
+      return {
+        status: 200,
+        data: {
+          message: "Login successful",
+          data: {
+            access_token: `token-${user.id}`,
+            token_type: "bearer",
+            user: { id: user.id, email: user.email, username: user.username },
+          },
+        },
+      };
+    }
   }
 
   // POST /auth/register
@@ -230,63 +319,100 @@ export function handleMockApi(
       };
     }
 
-    const users = getStoredUsers();
-    const existing = users.find(
-      (u) =>
-        u.email.toLowerCase() === email ||
-        u.username.toLowerCase() === username.toLowerCase()
-    );
+    try {
+      const { data: existing } = await supabase
+        .from("devops_users")
+        .select("id")
+        .or(`email.eq.${email},username.eq.${username}`)
+        .limit(1);
 
-    if (existing) {
+      if (existing && existing.length > 0) {
+        return {
+          status: 400,
+          data: { detail: "User with this email or username already exists." },
+        };
+      }
+
+      const newId = `user-${Date.now()}`;
+      const { data: newUser, error } = await supabase
+        .from("devops_users")
+        .insert({
+          id: newId,
+          email,
+          username,
+          password_hash: password,
+        })
+        .select()
+        .single();
+
+      const createdUser = !error && newUser ? newUser : { id: newId, email, username };
+      await seedUserData(createdUser.id);
+
       return {
-        status: 400,
-        data: { detail: "User with this email or username already exists." },
-      };
-    }
-
-    const newUser: StoredUser = {
-      id: `user-${Date.now()}`,
-      email,
-      username,
-      password,
-    };
-    users.push(newUser);
-    saveStoredUsers(users);
-    seedUserData(newUser.id);
-
-    return {
-      status: 201,
-      data: {
-        message: "User registered successfully",
+        status: 201,
         data: {
-          access_token: `token-${newUser.id}-${Date.now()}`,
-          token_type: "bearer",
-          user: {
-            id: newUser.id,
-            email: newUser.email,
-            username: newUser.username,
+          message: "User registered successfully",
+          data: {
+            access_token: `token-${createdUser.id}-${Date.now()}`,
+            token_type: "bearer",
+            user: {
+              id: createdUser.id,
+              email: createdUser.email,
+              username: createdUser.username,
+            },
           },
         },
-      },
-    };
+      };
+    } catch {
+      const newId = `user-${Date.now()}`;
+      const newUser = { id: newId, email, username, password };
+      const users = getLocalUsers();
+      users.push(newUser);
+      saveLocalUsers(users);
+      await seedUserData(newId);
+      return {
+        status: 201,
+        data: {
+          message: "User registered successfully",
+          data: {
+            access_token: `token-${newId}`,
+            token_type: "bearer",
+            user: { id: newId, email, username },
+          },
+        },
+      };
+    }
   }
 
   // GET /category
   if (cleanUrl === "/category" && normMethod === "GET") {
-    const cats = getStoredCategories(currentUserId);
-    const todos = getStoredTodos(currentUserId);
+    try {
+      let query = supabase.from("devops_categories").select("*");
+      if (currentUserId) query = query.eq("user_id", currentUserId);
+      const { data: cats, error } = await query.order("id", { ascending: true });
 
+      let todoQuery = supabase.from("devops_todos").select("id, category_id");
+      if (currentUserId) todoQuery = todoQuery.eq("user_id", currentUserId);
+      const { data: todos } = await todoQuery;
+
+      if (!error && cats) {
+        const categoriesWithCount = cats.map((cat) => ({
+          ...cat,
+          todos_count: todos ? todos.filter((t) => t.category_id === cat.id).length : 0,
+        }));
+        return { status: 200, data: { categories: categoriesWithCount } };
+      }
+    } catch (e) {
+      console.warn("Supabase fetch categories failed:", e);
+    }
+
+    const cats = getLocalCategories(currentUserId);
+    const todos = getLocalTodos(currentUserId);
     const categoriesWithCount = cats.map((cat) => ({
       ...cat,
       todos_count: todos.filter((t) => t.category_id === cat.id).length,
     }));
-
-    return {
-      status: 200,
-      data: {
-        categories: categoriesWithCount,
-      },
-    };
+    return { status: 200, data: { categories: categoriesWithCount } };
   }
 
   // POST /category
@@ -295,7 +421,31 @@ export function handleMockApi(
     if (!name) {
       return { status: 400, data: { detail: "Category name is required" } };
     }
-    const allCats = getStoredCategories();
+
+    try {
+      const { data: created, error } = await supabase
+        .from("devops_categories")
+        .insert({
+          user_id: currentUserId || "guest",
+          name,
+        })
+        .select()
+        .single();
+
+      if (!error && created) {
+        return {
+          status: 201,
+          data: {
+            message: "Category created",
+            category: { ...created, todos_count: 0 },
+          },
+        };
+      }
+    } catch (e) {
+      console.warn("Supabase create category failed:", e);
+    }
+
+    const allCats = getLocalCategories();
     const newCat = {
       id: Date.now(),
       name,
@@ -303,13 +453,10 @@ export function handleMockApi(
       todos_count: 0,
     };
     allCats.push(newCat);
-    saveStoredCategories(allCats);
+    saveLocalCategories(allCats);
     return {
       status: 201,
-      data: {
-        message: "Category created",
-        category: newCat,
-      },
+      data: { message: "Category created", category: newCat },
     };
   }
 
@@ -317,14 +464,30 @@ export function handleMockApi(
   const catPutMatch = cleanUrl.match(/^\/category\/(\d+)$/);
   if (catPutMatch && normMethod === "PUT") {
     const catId = Number(catPutMatch[1]);
-    const allCats = getStoredCategories();
+    try {
+      const { data: updated, error } = await supabase
+        .from("devops_categories")
+        .update({ name: data?.name })
+        .eq("id", catId)
+        .select()
+        .single();
+
+      if (!error && updated) {
+        return {
+          status: 200,
+          data: { message: "Category updated", category: updated },
+        };
+      }
+    } catch {}
+
+    const allCats = getLocalCategories();
     const catIndex = allCats.findIndex((c) => c.id === catId);
     if (catIndex >= 0) {
       allCats[catIndex] = {
         ...allCats[catIndex],
         name: data?.name || allCats[catIndex].name,
       };
-      saveStoredCategories(allCats);
+      saveLocalCategories(allCats);
       return {
         status: 200,
         data: { message: "Category updated", category: allCats[catIndex] },
@@ -337,66 +500,98 @@ export function handleMockApi(
   const catDelMatch = cleanUrl.match(/^\/category\/(\d+)$/);
   if (catDelMatch && normMethod === "DELETE") {
     const catId = Number(catDelMatch[1]);
-    const allCats = getStoredCategories().filter((c) => c.id !== catId);
-    saveStoredCategories(allCats);
-    // Unlink todos from deleted category
-    const allTodos = getStoredTodos().map((t) =>
-      t.category_id === catId ? { ...t, category_id: undefined } : t
-    );
-    saveStoredTodos(allTodos);
-    return {
-      status: 200,
-      data: { message: "Category deleted" },
-    };
+    try {
+      await supabase.from("devops_categories").delete().eq("id", catId);
+    } catch {}
+
+    const allCats = getLocalCategories().filter((c) => c.id !== catId);
+    saveLocalCategories(allCats);
+    return { status: 200, data: { message: "Category deleted" } };
   }
 
   // GET /todo
   if (cleanUrl === "/todo" && normMethod === "GET") {
-    let todos = getStoredTodos(currentUserId);
     const p = params || {};
+    try {
+      let query = supabase.from("devops_todos").select("*");
+      if (currentUserId) query = query.eq("user_id", currentUserId);
 
+      if (p.category_id !== undefined && p.category_id !== null) {
+        query = query.eq("category_id", Number(p.category_id));
+      }
+      if (p.completed !== undefined) {
+        query = query.eq("completed", String(p.completed) === "true");
+      }
+      if (p.priority) {
+        query = query.eq("priority", p.priority);
+      }
+      if (p.search && typeof p.search === "string" && p.search.trim()) {
+        query = query.ilike("name", `%${p.search.trim()}%`);
+      }
+
+      const { data: todos, error } = await query.order("id", { ascending: false });
+
+      if (!error && todos) {
+        let result = todos;
+        if (p.overdue !== undefined) {
+          const isOverdue = String(p.overdue) === "true";
+          const todayStr = new Date().toISOString().split("T")[0];
+          result = result.filter((t) => {
+            if (!t.deadline || t.completed) return false;
+            return isOverdue ? t.deadline < todayStr : t.deadline >= todayStr;
+          });
+        }
+        return { status: 200, data: { todos: result } };
+      }
+    } catch (e) {
+      console.warn("Supabase fetch todos failed:", e);
+    }
+
+    let todos = getLocalTodos(currentUserId);
     if (p.category_id !== undefined && p.category_id !== null) {
       todos = todos.filter((t) => t.category_id === Number(p.category_id));
     }
-
     if (p.completed !== undefined) {
-      const boolVal = String(p.completed) === "true";
-      todos = todos.filter((t) => t.completed === boolVal);
+      todos = todos.filter((t) => t.completed === (String(p.completed) === "true"));
     }
-
     if (p.priority) {
       todos = todos.filter((t) => t.priority === p.priority);
     }
-
     if (p.search && typeof p.search === "string" && p.search.trim()) {
       const q = p.search.toLowerCase();
-      todos = todos.filter(
-        (t) =>
-          t.name.toLowerCase().includes(q) ||
-          (t.description && t.description.toLowerCase().includes(q))
-      );
+      todos = todos.filter((t) => t.name.toLowerCase().includes(q));
     }
-
-    if (p.overdue !== undefined) {
-      const isOverdue = String(p.overdue) === "true";
-      const todayStr = new Date().toISOString().split("T")[0];
-      todos = todos.filter((t) => {
-        if (!t.deadline || t.completed) return false;
-        return isOverdue ? t.deadline < todayStr : t.deadline >= todayStr;
-      });
-    }
-
-    return {
-      status: 200,
-      data: {
-        todos,
-      },
-    };
+    return { status: 200, data: { todos } };
   }
 
   // POST /todo
   if (cleanUrl === "/todo" && normMethod === "POST") {
-    const allTodos = getStoredTodos();
+    try {
+      const { data: created, error } = await supabase
+        .from("devops_todos")
+        .insert({
+          user_id: currentUserId || "guest",
+          name: data?.name || "Untitled Todo",
+          description: data?.description || "",
+          deadline: data?.deadline || null,
+          completed: !!data?.completed,
+          priority: data?.priority || "medium",
+          category_id: data?.category_id ? Number(data.category_id) : null,
+        })
+        .select()
+        .single();
+
+      if (!error && created) {
+        return {
+          status: 201,
+          data: { message: "Todo created successfully", todo: created },
+        };
+      }
+    } catch (e) {
+      console.warn("Supabase create todo failed:", e);
+    }
+
+    const allTodos = getLocalTodos();
     const newTodo: any = {
       id: Date.now(),
       name: data?.name || "Untitled Todo",
@@ -408,7 +603,7 @@ export function handleMockApi(
       user_id: currentUserId,
     };
     allTodos.unshift(newTodo);
-    saveStoredTodos(allTodos);
+    saveLocalTodos(allTodos);
     return {
       status: 201,
       data: { message: "Todo created successfully", todo: newTodo },
@@ -419,7 +614,31 @@ export function handleMockApi(
   const todoPutMatch = cleanUrl.match(/^\/todo\/(\d+)$/);
   if (todoPutMatch && normMethod === "PUT") {
     const todoId = Number(todoPutMatch[1]);
-    const allTodos = getStoredTodos();
+    try {
+      const updateData: any = {};
+      if (data?.name !== undefined) updateData.name = data.name;
+      if (data?.description !== undefined) updateData.description = data.description;
+      if (data?.deadline !== undefined) updateData.deadline = data.deadline;
+      if (data?.completed !== undefined) updateData.completed = data.completed;
+      if (data?.priority !== undefined) updateData.priority = data.priority;
+      if (data?.category_id !== undefined) updateData.category_id = data.category_id;
+
+      const { data: updated, error } = await supabase
+        .from("devops_todos")
+        .update(updateData)
+        .eq("id", todoId)
+        .select()
+        .single();
+
+      if (!error && updated) {
+        return {
+          status: 200,
+          data: { message: "Todo updated successfully", todo: updated },
+        };
+      }
+    } catch {}
+
+    const allTodos = getLocalTodos();
     const idx = allTodos.findIndex((t) => t.id === todoId);
     if (idx >= 0) {
       allTodos[idx] = {
@@ -428,7 +647,7 @@ export function handleMockApi(
         id: todoId,
         user_id: allTodos[idx].user_id || currentUserId,
       };
-      saveStoredTodos(allTodos);
+      saveLocalTodos(allTodos);
       return {
         status: 200,
         data: { message: "Todo updated successfully", todo: allTodos[idx] },
@@ -441,18 +660,36 @@ export function handleMockApi(
   const todoDelMatch = cleanUrl.match(/^\/todo\/(\d+)$/);
   if (todoDelMatch && normMethod === "DELETE") {
     const todoId = Number(todoDelMatch[1]);
-    const allTodos = getStoredTodos().filter((t) => t.id !== todoId);
-    saveStoredTodos(allTodos);
-    return {
-      status: 200,
-      data: { message: "Todo deleted successfully" },
-    };
+    try {
+      await supabase.from("devops_todos").delete().eq("id", todoId);
+    } catch {}
+
+    const allTodos = getLocalTodos().filter((t) => t.id !== todoId);
+    saveLocalTodos(allTodos);
+    return { status: 200, data: { message: "Todo deleted successfully" } };
   }
 
   // GET /dashboard/stats
   if (cleanUrl === "/dashboard/stats" && normMethod === "GET") {
-    const todos = getStoredTodos(currentUserId);
-    const categories = getStoredCategories(currentUserId);
+    let todos: any[] = [];
+    let categories: any[] = [];
+
+    try {
+      let tQuery = supabase.from("devops_todos").select("*");
+      if (currentUserId) tQuery = tQuery.eq("user_id", currentUserId);
+      const { data: tData } = await tQuery;
+      if (tData) todos = tData;
+
+      let cQuery = supabase.from("devops_categories").select("*");
+      if (currentUserId) cQuery = cQuery.eq("user_id", currentUserId);
+      const { data: cData } = await cQuery;
+      if (cData) categories = cData;
+    } catch {}
+
+    if (todos.length === 0 && categories.length === 0) {
+      todos = getLocalTodos(currentUserId);
+      categories = getLocalCategories(currentUserId);
+    }
 
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, "0");

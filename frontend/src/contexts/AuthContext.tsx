@@ -150,7 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       };
       const access_token = `oauth-${provider}-${userId}`;
 
-      seedUserData(userId);
+      await seedUserData(userId);
 
       localStorage.setItem("authToken", access_token);
       localStorage.setItem("authUser", JSON.stringify(userData));

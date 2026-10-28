@@ -47,7 +47,7 @@ axiosInstance.defaults.adapter = async (config) => {
     }
   }
 
-  const { status, data } = handleMockApi(
+  const { status, data } = await handleMockApi(
     config.method || "GET",
     config.url || "",
     reqData,
